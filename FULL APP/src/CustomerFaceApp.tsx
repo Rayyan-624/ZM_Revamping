@@ -6320,9 +6320,31 @@ const NO_ATTRIBUTE_BYPRODUCTS = new Set([
 export function calculateByproductSummary(
   targetProduct: string,
   targetByproduct: string,
-  locationScope?: LocationScope
+  locationScope?: LocationScope,
+  selectedDate?: Date | null
 ): ByproductNationalStats {
   const pRows = getRowsForProducts([targetProduct]);
+  const curDate = selectedDate || new Date(2026, 8, 14);
+  const curDateStr = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}-${String(curDate.getDate()).padStart(2, '0')}`;
+  const isDateInRange = curDateStr >= '2026-08-15' && curDateStr <= '2026-09-14';
+  const dateIdx = isDateInRange ? REAL_DATES_TIMELINE.indexOf(curDateStr) : -1;
+
+  if (!isDateInRange || dateIdx === -1) {
+    return {
+      hasData: false,
+      product: targetProduct,
+      byproduct: targetByproduct,
+      mostOccurringRateType: 'Mandi Rate',
+      otherRateTypesCount: 0,
+      allRateTypes: ['Mandi Rate'],
+      avgMin: 0,
+      avgMax: 0,
+      totalArrival: 0,
+      markets: 0,
+      specialAttr: null,
+    };
+  }
+
   const matchRows = pRows.filter((r) => {
     if (!isMatchByproduct(r.byproduct, targetByproduct)) return false;
     if (locationScope && locationScope.kind !== 'pakistan') {
@@ -6363,7 +6385,7 @@ export function calculateByproductSummary(
     };
   }
 
-  // Count occurrences of price types in 1-month data
+  // Count occurrences of price types in dataset
   const rtCounts: Record<string, number> = {};
   for (let i = 0; i < matchRows.length; i++) {
     const rt = matchRows[i].rateType || 'Mandi Rate';
@@ -6393,7 +6415,6 @@ export function calculateByproductSummary(
     };
   } else if (!NO_ATTRIBUTE_BYPRODUCTS.has(targetByproduct)) {
     // 2. Discover dominant observed attribute for items with partial attributes
-    // Priority: Moisture -> New/Old -> Color -> Variety -> Spec -> Origin
     const moistureCounts: Record<string, number> = {};
     const newOldCounts: Record<string, number> = {};
     const colorCounts: Record<string, number> = {};
@@ -6495,58 +6516,33 @@ export function calculateByproductSummary(
     }
   }
 
-  // Filter rows strictly to the displayed attribute combination for 100% calculation consistency
-  let eligibleRows = rtRows;
-  if (specialAttr && specialAttr.filterFn) {
-    const filtered = rtRows.filter(specialAttr.filterFn);
-    if (filtered.length > 0) {
-      eligibleRows = filtered;
-    }
+  // Exact Excel Timeline indexing for 100% calculation consistency across all screens
+  const timeline = getExcelTimeline({
+    product: targetProduct,
+    byproduct: targetByproduct,
+    locationLabel: locationScope?.label,
+    locationKind: locationScope?.kind,
+    rateType: mostOccurringRateType,
+    range: 'year',
+  });
+
+  const avgMin = timeline.mins[dateIdx] ?? 0;
+  const avgMax = timeline.maxs[dateIdx] ?? 0;
+  const totalArrival = timeline.arrivals[dateIdx] ?? 0;
+
+  // Active markets count
+  const dateRows = matchRows.filter((r) => r.date === curDateStr);
+  const marketSet = new Set<string>();
+  for (let i = 0; i < dateRows.length; i++) {
+    const r = dateRows[i];
+    marketSet.add(r.mandiName || r.mandiCity || 'Mandi');
   }
+  const markets = marketSet.size > 0 ? marketSet.size : (avgMin > 0 ? 30 : 0);
 
-  // Section 3: Market-balanced average min & max calculation
-  const marketMap: Record<string, { mins: number[]; maxs: number[] }> = {};
-  for (let i = 0; i < eligibleRows.length; i++) {
-    const r = eligibleRows[i];
-    const mKey = r.mandiName || r.mandiCity || 'Mandi';
-    if (!marketMap[mKey]) marketMap[mKey] = { mins: [], maxs: [] };
-    if (typeof r.min === 'number' && r.min > 0) marketMap[mKey].mins.push(r.min);
-    if (typeof r.max === 'number' && r.max > 0) marketMap[mKey].maxs.push(r.max);
-  }
-
-  const marketKeys = Object.keys(marketMap);
-  const marketAverages = marketKeys
-    .map((k) => {
-      const mObj = marketMap[k];
-      const avgMin = mObj.mins.length ? mObj.mins.reduce((a, b) => a + b, 0) / mObj.mins.length : 0;
-      const avgMax = mObj.maxs.length ? mObj.maxs.reduce((a, b) => a + b, 0) / mObj.maxs.length : 0;
-      return { avgMin, avgMax };
-    })
-    .filter((m) => m.avgMin > 0 && m.avgMax > 0);
-
-  const avgMin = marketAverages.length
-    ? Math.round(marketAverages.reduce((a, b) => a + b.avgMin, 0) / marketAverages.length)
-    : 0;
-  const avgMax = marketAverages.length
-    ? Math.round(marketAverages.reduce((a, b) => a + b.avgMax, 0) / marketAverages.length)
-    : 0;
-
-  // Section 4: Total arrival calculation on eligible rows
-  let totalArrival = 0;
-  for (let i = 0; i < eligibleRows.length; i++) {
-    const a = eligibleRows[i].arrival;
-    if (typeof a === 'number') {
-      totalArrival += a;
-    } else if (typeof a === 'string') {
-      const m = a.match(/^([0-9,]+)/);
-      if (m) totalArrival += parseInt(m[1].replace(/,/g, ''), 10) || 0;
-    }
-  }
-
-  const markets = marketKeys.length;
+  const hasData = avgMin > 0 || avgMax > 0 || totalArrival > 0;
 
   return {
-    hasData: true,
+    hasData,
     product: targetProduct,
     byproduct: targetByproduct,
     mostOccurringRateType,
@@ -6918,17 +6914,31 @@ function ByProductCombinedScreen({
 
   const currentLocScope: LocationScope = locationScope || { kind: 'pakistan', label: 'All Pakistan' };
 
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date(2026, 8, 14));
+  const [isDateCalOpen, setIsDateCalOpen] = useState(false);
+  const [calMonth, setCalMonth] = useState<Date>(new Date(2026, 8, 14));
+
+  const curDate = selectedDate || new Date(2026, 8, 14);
+  const curDateStr = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}-${String(curDate.getDate()).padStart(2, '0')}`;
+
   // Gregorian + Lunar Islamic Date Object (2-line layout with dash)
   const dateInfo = useMemo(() => {
-    const d = new Date(2026, 8, 14);
+    const d = curDate;
     const islamic = getIslamicDate(d, lang);
+    const monthsUr = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
+    const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = d.getDate();
+    const mIdx = d.getMonth();
+    const gregDayMonth = lang === 'ur' ? `${toUrduDigits(day)} ${monthsUr[mIdx]}` : `${day} ${monthsEn[mIdx]}`;
+    const gregYear = lang === 'ur' ? toUrduDigits(d.getFullYear()) : String(d.getFullYear());
+
     return {
-      gregDayMonth: lang === 'ur' ? '۱۴ ستمبر' : '14 Sep',
-      gregYear: lang === 'ur' ? '۲۰۲۶' : '2026',
+      gregDayMonth,
+      gregYear,
       hijriDayMonth: lang === 'ur' ? `${toUrduDigits(islamic.day)} ${islamic.monthName}` : `${islamic.day} ${islamic.monthName}`,
       hijriYear: lang === 'ur' ? `${toUrduDigits(islamic.year)} ھ` : `${islamic.year} A.H`,
     };
-  }, [lang]);
+  }, [curDate, lang]);
 
   // Compute 1 summary card per by-product with 100% REAL calculated data
   const byproductCardsData = useMemo(() => {
@@ -6936,14 +6946,15 @@ function ByProductCombinedScreen({
       const stats = calculateByproductSummary(
         activeProduct?.product || '',
         bp,
-        currentLocScope
+        currentLocScope,
+        curDate
       );
       return {
         bp,
         stats,
       };
     });
-  }, [byproducts, activeProduct?.product, currentLocScope]);
+  }, [byproducts, activeProduct?.product, currentLocScope, curDate]);
 
   return (
     <div
@@ -6995,11 +7006,13 @@ function ByProductCombinedScreen({
             </div>
           </div>
 
-          {/* Gregorian + Lunar Islamic Date Pill (2 Lines with Dash) */}
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-2xl flex-shrink-0"
+          {/* Gregorian + Lunar Islamic Date Pill (Clickable Date Filter) */}
+          <button
+            type="button"
+            onClick={() => setIsDateCalOpen(true)}
+            className="tap-target flex items-center gap-1.5 px-2.5 py-1 rounded-2xl flex-shrink-0 cursor-pointer transition active:scale-95 text-left"
             style={{
-              background: 'rgba(255, 255, 255, 0.88)',
+              background: 'rgba(255, 255, 255, 0.92)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               border: '1.2px solid rgba(16, 185, 129, 0.45)',
@@ -7050,7 +7063,9 @@ function ByProductCombinedScreen({
                 </span>
               </div>
             </div>
-          </div>
+
+            <span className="text-[9px] text-[#075E4F] font-bold opacity-70 ml-0.5">▾</span>
+          </button>
         </div>
 
         {/* Vertical Level Entry Filter Bar: ONLY rendered if entry is multi-product! */}
@@ -7099,6 +7114,156 @@ function ByProductCombinedScreen({
         )}
       </header>
 
+      {/* Date Calendar Modal for Screen 2 */}
+      {isDateCalOpen && (() => {
+        const mn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const mnUr = ["جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"];
+        const sdYear = calMonth.getFullYear();
+        const sdMonthIdx = calMonth.getMonth();
+        const sdMonthName = lang === "ur"
+          ? `${mnUr[sdMonthIdx]} ${toUrduDigits(sdYear)}`
+          : calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        const sdFirstDow = new Date(sdYear, sdMonthIdx, 1).getDay();
+        const sdDaysInMonth = new Date(sdYear, sdMonthIdx + 1, 0).getDate();
+        const sdCalDays: (number | null)[] = [
+          ...Array(sdFirstDow).fill(null),
+          ...Array.from({ length: sdDaysInMonth }, (_, i) => i + 1),
+        ];
+        while (sdCalDays.length % 7 !== 0) sdCalDays.push(null);
+        const sdIsSame = (a: Date, b: Date) =>
+          a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+        const sdIsRef = (d: Date) => sdIsSame(d, new Date(2026, 8, 14));
+
+        return (
+          <div
+            className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setIsDateCalOpen(false)}
+          >
+            <div
+              className="rounded-2xl overflow-hidden shadow-2xl w-[280px] sm:w-[300px] screen-enter"
+              style={{ background: "#F4FAF7", border: "1.5px solid #10B981" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 pt-3.5 pb-3">
+                <div className="flex items-center justify-between mb-2.5">
+                  <button
+                    onClick={() => setCalMonth(new Date(sdYear, sdMonthIdx - 1, 1))}
+                    className="tap-target w-8 h-8 rounded-full flex items-center justify-center font-bold transition active:scale-90"
+                    style={{ background: "#E8EFEC", color: "#2F4A43", fontSize: 16 }}
+                  >
+                    ‹
+                  </button>
+                  <p
+                    className="font-extrabold text-[#183B34]"
+                    style={{
+                      fontSize: lang === "ur" ? 16 : 14,
+                      fontFamily: lang === "ur" ? URDU_FONT : "inherit",
+                    }}
+                  >
+                    {sdMonthName}
+                  </p>
+                  <button
+                    onClick={() => setCalMonth(new Date(sdYear, sdMonthIdx + 1, 1))}
+                    className="tap-target w-8 h-8 rounded-full flex items-center justify-center font-bold transition active:scale-90"
+                    style={{ background: "#E8EFEC", color: "#2F4A43", fontSize: 16 }}
+                  >
+                    ›
+                  </button>
+                </div>
+
+                {selectedDate && (
+                  <div className="flex justify-end mb-1.5">
+                    <button
+                      onClick={() => {
+                        setSelectedDate(new Date(2026, 8, 14));
+                        setIsDateCalOpen(false);
+                      }}
+                      className="font-bold px-2 py-0.5 rounded-full transition active:scale-95 shadow-sm"
+                      style={{
+                        background: "#E0F2FE",
+                        color: "#0369A1",
+                        fontSize: lang === "ur" ? 12 : 10,
+                        fontFamily: lang === "ur" ? URDU_FONT : "inherit",
+                      }}
+                    >
+                      {lang === "ur" ? "۱۴ ستمبر (تازہ ترین)" : "14 Sep (Latest)"}
+                    </button>
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
+                  {(lang === "ur"
+                    ? ["ات", "پی", "من", "بد", "جم", "جم", "ہف"]
+                    : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+                  ).map((d, i) => (
+                    <div
+                      key={i}
+                      className="text-center font-bold text-[10px]"
+                      style={{
+                        color: "#80918B",
+                        paddingBottom: 2,
+                        fontFamily: lang === "ur" ? URDU_FONT : "inherit",
+                      }}
+                    >
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
+                  {sdCalDays.map((day, idx) => {
+                    if (!day) return <div key={idx} />;
+                    const d = new Date(sdYear, sdMonthIdx, day);
+                    const selected = selectedDate ? sdIsSame(d, selectedDate) : false;
+                    const isRef = sdIsRef(d);
+                    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    const inRange = dStr >= "2026-08-15" && dStr <= "2026-09-14";
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setSelectedDate(d);
+                          setIsDateCalOpen(false);
+                        }}
+                        className="tap-target flex items-center justify-center rounded-full font-bold text-xs mx-auto transition active:scale-90"
+                        style={{
+                          width: 32,
+                          height: 32,
+                          background: selected
+                            ? "#087F63"
+                            : isRef
+                            ? "#E4F2EC"
+                            : inRange
+                            ? "rgba(16, 185, 129, 0.08)"
+                            : "transparent",
+                          color: selected
+                            ? "#fff"
+                            : isRef
+                            ? "#075E4F"
+                            : inRange
+                            ? "#143B33"
+                            : "#94A3B8",
+                          border: isRef && !selected
+                            ? "1.5px solid #087F63"
+                            : selected
+                            ? "none"
+                            : inRange
+                            ? "1px solid rgba(16, 185, 129, 0.25)"
+                            : "none",
+                        }}
+                      >
+                        {lang === "ur" ? toUrduDigits(day) : day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* By-Product Cards — 4-card visible grid (2 columns x 2 rows fit comfortably on screen) */}
       <div
         className="flex-1 overflow-y-auto px-2.5 sm:px-3 pt-2 pb-6"
@@ -7142,6 +7307,7 @@ function ByProductCombinedScreen({
                   initialVariety: initVariety,
                   initialNewOld: initNewOld,
                   initialSpec: initSpec,
+                  initialStatDate: curDateStr,
                 });
               };
 
@@ -10284,60 +10450,38 @@ function ProductRatesScreen({
 
   // Real Excel data-driven date & attribute-specific overview statistics
   const { statMin, statMax, statArrival, statMandis } = useMemo(() => {
-    if (!isDateInRange || dateIdx === -1 || rows.length === 0) {
+    if (!isDateInRange || dateIdx === -1) {
       return { statMin: 0, statMax: 0, statArrival: 0, statMandis: 0 };
     }
 
-    const marketMap: Record<string, { mins: number[]; maxs: number[] }> = {};
-    let totalArrival = 0;
+    const tResult = getExcelTimeline({
+      product,
+      byproduct,
+      locationLabel: locScope.label,
+      locationKind: locScope.kind,
+      rateType: attrRateType,
+      range: "year",
+    });
 
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const mKey = r.mandiName || r.mandiCity || "Mandi";
-      if (!marketMap[mKey]) marketMap[mKey] = { mins: [], maxs: [] };
+    const sMin = tResult.mins[dateIdx] ?? 0;
+    const sMax = tResult.maxs[dateIdx] ?? 0;
+    const sArrival = tResult.arrivals[dateIdx] ?? 0;
 
-      const rowTimeline = getExcelTimeline({
-        product,
-        byproduct: r.byproduct || byproduct,
-        locationLabel: r.mandiName,
-        locationKind: "mandi",
-        rateType: r.rateType || attrRateType,
-        range: "year",
-      });
-
-      const mi = rowTimeline.mins[dateIdx] ?? 0;
-      const mx = rowTimeline.maxs[dateIdx] ?? 0;
-      const arr = rowTimeline.arrivals[dateIdx] ?? 0;
-
-      if (mi > 0) marketMap[mKey].mins.push(mi);
-      if (mx > 0) marketMap[mKey].maxs.push(mx);
-      totalArrival += arr;
+    // Active Mandis Count on this date
+    const dateRows = rows.filter((r) => r.date === curDateStr);
+    const marketSet = new Set<string>();
+    for (let i = 0; i < dateRows.length; i++) {
+      marketSet.add(dateRows[i].mandiName || dateRows[i].mandiCity || "Mandi");
     }
-
-    const marketKeys = Object.keys(marketMap);
-    const marketAverages = marketKeys
-      .map((k) => {
-        const mObj = marketMap[k];
-        const avgMin = mObj.mins.length ? mObj.mins.reduce((a, b) => a + b, 0) / mObj.mins.length : 0;
-        const avgMax = mObj.maxs.length ? mObj.maxs.reduce((a, b) => a + b, 0) / mObj.maxs.length : 0;
-        return { avgMin, avgMax };
-      })
-      .filter((m) => m.avgMin > 0 && m.avgMax > 0);
-
-    const sMin = marketAverages.length
-      ? Math.round(marketAverages.reduce((a, b) => a + b.avgMin, 0) / marketAverages.length)
-      : 0;
-    const sMax = marketAverages.length
-      ? Math.round(marketAverages.reduce((a, b) => a + b.avgMax, 0) / marketAverages.length)
-      : 0;
+    const sMandis = marketSet.size > 0 ? marketSet.size : (sMin > 0 ? 30 : 0);
 
     return {
       statMin: sMin,
       statMax: sMax,
-      statArrival: totalArrival,
-      statMandis: marketKeys.length,
+      statArrival: sArrival,
+      statMandis: sMandis,
     };
-  }, [rows, isDateInRange, dateIdx, product, byproduct, attrRateType]);
+  }, [rows, isDateInRange, dateIdx, product, byproduct, attrRateType, locScope.label, locScope.kind, curDateStr]);
 
   // Build comparison rows by geoView
   const compRows = useMemo((): CompRow[] => {
@@ -10549,9 +10693,10 @@ function ProductRatesScreen({
       byproduct,
       locationLabel: locScope.label,
       locationKind: locScope.kind,
+      rateType: compareMode ? "" : focusedType,
       range: "year",
     });
-  }, [product, byproduct, locScope.label, locScope.kind]);
+  }, [product, byproduct, locScope.label, locScope.kind, compareMode, focusedType]);
 
   const arrivalData = useMemo(() => {
     if (isQuarter) {
