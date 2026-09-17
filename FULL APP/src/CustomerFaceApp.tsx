@@ -11149,22 +11149,48 @@ function ProductRatesScreen({
                     ? PROVINCE_THEMES[locScope.label] || PROVINCE_THEMES.Punjab
                     : PROVINCE_THEMES[mandiProvince] || PROVINCE_THEMES.Punjab;
 
-              // Build revolving racetrack strip label: 'Pakistan' or selected mandi name
-              let stripLabel = "";
-              if (locScope.kind === "pakistan") {
-                stripLabel = lang === "ur" ? "پاکستان" : "Pakistan";
-              } else if (locScope.kind === "province") {
-                stripLabel = lang === "ur" ? "صوبہ " + tm(locScope.label) : locScope.label + " Province";
-              } else if (locScope.kind === "district") {
-                stripLabel = lang === "ur" ? "ضلع " + tm(locScope.label) : locScope.label + " District";
-              } else if (locScope.kind === "mandi") {
-                const clean = locScope.label.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "");
-                stripLabel = lang === "ur" ? tm(clean) + " منڈی" : clean + " Mandi";
-              } else {
-                stripLabel = lang === "ur" ? "پاکستان" : "Pakistan";
-              }
+              // Format Mandi triad: Mandi Name, District Name, Province Name
+              const formatMandiTriad = (name: string, dist?: string, prov?: string) => {
+                const cleanM = name.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "").trim();
+                const mLabel =
+                  lang === "ur"
+                    ? (tm(cleanM).includes("منڈی") ? tm(cleanM) : tm(cleanM) + " منڈی")
+                    : (cleanM.includes("Mandi") ? cleanM : cleanM + " Mandi");
+                const dLabel = dist ? tm(dist) : tm(cleanM);
+                const pLabel = prov ? tm(prov) : (lang === "ur" ? "پنجاب" : "Punjab");
+                return lang === "ur" ? `${mLabel}، ${dLabel}، ${pLabel}` : `${mLabel}, ${dLabel}, ${pLabel}`;
+              };
 
-              let baseItems = [stripLabel, stripLabel, stripLabel, stripLabel, stripLabel, stripLabel, stripLabel, stripLabel];
+              // Build revolving racetrack strip items: Mandi + District + Province triad
+              let baseItems: string[] = [];
+              if (locScope.kind === "mandi") {
+                const item = formatMandiTriad(
+                  activeMandiObj ? activeMandiObj.name : locScope.label,
+                  activeMandiObj?.city,
+                  activeMandiObj?.province || mandiProvince,
+                );
+                baseItems = [item, item, item, item, item, item];
+              } else if (locScope.kind === "district") {
+                const distMandis = INITIAL_MANDIS.filter(
+                  (m) => m.city.toLowerCase() === locScope.label.toLowerCase(),
+                );
+                const items = distMandis.length > 0
+                  ? distMandis.map((m) => formatMandiTriad(m.name, m.city, m.province))
+                  : [formatMandiTriad(locScope.label, locScope.label, mandiProvince)];
+                baseItems = items.length < 4 ? [...items, ...items, ...items, ...items].slice(0, 6) : items;
+              } else if (locScope.kind === "province") {
+                const provMandis = INITIAL_MANDIS.filter(
+                  (m) => m.province.toLowerCase() === locScope.label.toLowerCase(),
+                );
+                const items = provMandis.length > 0
+                  ? provMandis.map((m) => formatMandiTriad(m.name, m.city, m.province))
+                  : [formatMandiTriad(locScope.label, locScope.label, locScope.label)];
+                baseItems = items.length < 4 ? [...items, ...items, ...items].slice(0, 6) : items;
+              } else {
+                // Pakistan / All
+                const mandiList = INITIAL_MANDIS.map((m) => formatMandiTriad(m.name, m.city, m.province));
+                baseItems = mandiList.length > 0 ? mandiList : [formatMandiTriad("Pakpattan", "Pakpattan", "Punjab")];
+              }
 
               return (
                 <div
@@ -11600,56 +11626,105 @@ function ProductRatesScreen({
                     {/* HORIZONTAL DIVIDER & COLLAPSIBLE ATTRIBUTES STRIP */}
                     <div className="w-full my-1.5" style={{ height: 1, background: "#EEF3F0" }} />
 
-                    {/* Clickable Header Strip to Toggle 6 Attributes (Closed by default to save vertical space) */}
-                    <button
-                      type="button"
-                      onClick={() => setIsAttrPanelOpen(!isAttrPanelOpen)}
-                      className="tap-target w-full flex items-center justify-between py-1 px-1.5 rounded-xl transition-all duration-150 active:scale-[0.99] hover:bg-[#F0F8F4] group"
-                      style={{
-                        background: isAttrPanelOpen ? '#F2F8F5' : 'transparent',
-                      }}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
+                    {/* Attributes Bar: Prominent Rate Type Chip (Visible before expanding) + 5 More Attributes Toggle */}
+                    <div className="w-full flex items-center justify-between gap-1.5 py-0.5">
+                      {/* 1. EXPOSED RATE TYPE (Visible before expanding, tap to open rate type sheet) */}
+                      <button
+                        type="button"
+                        onClick={() => setAttrSheet("ratetype")}
+                        className="tap-target flex items-center gap-1.5 py-1 px-2.5 rounded-xl border transition-all duration-150 active:scale-95 hover:border-[#087F63] min-w-0"
+                        style={{
+                          background: "linear-gradient(135deg, #F0FAF5 0%, #E6F7F0 100%)",
+                          borderColor: "#A7F3D0",
+                          boxShadow: "0 1px 3px rgba(8,127,99,0.08)",
+                        }}
+                        title={lang === "ur" ? "نرخ کی قسم تبدیل کریں" : "Change Rate Type"}
+                      >
                         <div
-                          className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                          style={{ background: "#E8F5EE", color: "#087F63" }}
+                          className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
+                          style={{ background: "#087F63", color: "#FFFFFF" }}
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 19h4V9H4v10zm6 0h4V4h-4v15zm6 0h4v-7h-4v7z" />
+                          </svg>
+                        </div>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span
+                            className="text-[9px] font-semibold text-[#065F46] whitespace-nowrap"
+                            style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                          >
+                            {lang === "ur" ? "نرخ:" : "Rate:"}
+                          </span>
+                          <span
+                            className="text-[10.5px] font-extrabold text-[#064E3B] truncate"
+                            style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                          >
+                            {attrRateType ? tr(attrRateType) : (lang === "ur" ? "منڈی ریٹ" : "Mandi Rate")}
+                          </span>
+                          <svg
+                            width="8"
+                            height="8"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#087F63"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="flex-shrink-0"
+                          >
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </div>
+                      </button>
+
+                      {/* 2. EXPAND / COLLAPSE 5 MORE ATTRIBUTES */}
+                      <button
+                        type="button"
+                        onClick={() => setIsAttrPanelOpen(!isAttrPanelOpen)}
+                        className="tap-target flex items-center gap-1.5 py-1 px-2.5 rounded-xl border transition-all duration-150 active:scale-95 flex-shrink-0"
+                        style={{
+                          background: isAttrPanelOpen ? "#F0F8F4" : "#F9FAFB",
+                          borderColor: isAttrPanelOpen ? "#A7F3D0" : "#E5E7EB",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                        }}
+                      >
+                        <div
+                          className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
+                          style={{
+                            background: isAttrPanelOpen ? "#E8F5EE" : "#F3F4F6",
+                            color: isAttrPanelOpen ? "#087F63" : "#4B5563",
+                          }}
+                        >
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
                           </svg>
                         </div>
                         <span
-                          className="text-[10.5px] font-bold text-[#143B33] truncate"
-                          style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                        >
-                          {lang === "ur" ? "خصوصی اوصاف (۶ اختیارات)" : "Specific Attributes (6 Options)"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <span
-                          className="text-[9.5px] font-bold text-[#087F63]"
-                          style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                          className="text-[9.5px] font-bold"
+                          style={{
+                            color: isAttrPanelOpen ? "#087F63" : "#374151",
+                            fontFamily: lang === "ur" ? URDU_FONT : "inherit",
+                          }}
                         >
                           {isAttrPanelOpen
                             ? (lang === "ur" ? "چھپائیں" : "Hide")
-                            : (lang === "ur" ? "دیکھیں" : "View")}
+                            : (lang === "ur" ? "+۵ مزید اوصاف" : "+5 More Specs")}
                         </span>
                         <svg
-                          width="11"
-                          height="11"
+                          width="9"
+                          height="9"
                           viewBox="0 0 24 24"
                           fill="none"
-                          stroke="#087F63"
+                          stroke={isAttrPanelOpen ? "#087F63" : "#6B7280"}
                           strokeWidth="2.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          className={`transition-transform duration-200 ${isAttrPanelOpen ? 'rotate-180' : ''}`}
+                          className={`transition-transform duration-200 ${isAttrPanelOpen ? "rotate-180" : ""}`}
                         >
                           <polyline points="6 9 12 15 18 9" />
                         </svg>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
 
                     {/* BOTTOM SECTION: 6 Attributes (2 Columns x 3 Rows) — Visible ONLY when open */}
                     {isAttrPanelOpen && (() => {
