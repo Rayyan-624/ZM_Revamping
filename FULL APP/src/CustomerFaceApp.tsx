@@ -6633,12 +6633,12 @@ function ByProductNationalCard({
   const { lang, tc, tr } = useLang();
   const iconSrc = getproductIconSrc(stats.byproduct, vertical);
 
-  // Format arrival e.g. 920 t or 3,400 Bags
+  // Format arrival strictly in Bags e.g. 3,400 Bags (never tonnes). If missing/0, show '—'
   const arrivalDisplay =
-    stats.totalArrival > 0
-      ? stats.totalArrival >= 1000
-        ? Math.round(stats.totalArrival / 25).toLocaleString() + ' t'
-        : stats.totalArrival.toLocaleString() + ' B'
+    stats.hasData && stats.totalArrival > 0
+      ? lang === 'ur'
+        ? `${toUrduDigits(stats.totalArrival.toLocaleString())} تھیلے`
+        : `${stats.totalArrival.toLocaleString()} Bags`
       : '—';
 
   return (
@@ -6647,35 +6647,19 @@ function ByProductNationalCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className="relative w-full rounded-[20px] overflow-hidden text-white transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-md select-none flex flex-col justify-between"
+      className="relative w-full rounded-[20px] overflow-hidden transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-[0_4px_16px_rgba(6,77,64,0.08)] hover:shadow-[0_6px_20px_rgba(6,77,64,0.14)] select-none flex flex-col justify-between"
       style={{
-        background:
-          'linear-gradient(155deg, #034839 0%, #02362A 55%, #01241C 100%)',
-        border: '1.2px solid rgba(52, 211, 153, 0.42)',
-        boxShadow:
-          '0 6px 18px rgba(2, 44, 34, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16)',
-        padding: '11px 11px 9px',
-        minHeight: 188,
+        background: '#FFFFFF',
+        border: '1.5px solid #D1E5DC',
+        padding: '12px 12px 10px',
+        minHeight: 215,
       }}
     >
-      {/* Subtle decorative concentric arc */}
-      <div
-        className="absolute -bottom-10 -right-10 pointer-events-none rounded-full"
-        style={{
-          width: 140,
-          height: 140,
-          border: '1.2px solid rgba(52, 211, 153, 0.12)',
-          boxShadow:
-            'inset 0 0 0 15px rgba(52, 211, 153, 0.04), inset 0 0 0 35px rgba(52, 211, 153, 0.02)',
-          zIndex: 0,
-        }}
-      />
-
-      {/* Top Header: Title on Left; Special Attribute on TOP & +X Count BELOW on Right */}
+      {/* Top Header: Title & Rate Type on Left; Special Attribute on TOP & +X Count BELOW on Right */}
       <div className="relative z-10 flex items-start justify-between gap-1.5">
         <div className="min-w-0 flex-1">
           <h3
-            className="text-[14.5px] sm:text-[15px] font-black text-white leading-tight tracking-tight line-clamp-1"
+            className="text-[16px] sm:text-[17px] font-black text-[#143B33] leading-tight tracking-tight line-clamp-1"
             style={{
               fontFamily: lang === 'ur' ? URDU_FONT : "'Inter', sans-serif",
             }}
@@ -6683,7 +6667,7 @@ function ByProductNationalCard({
             {tc(stats.byproduct)}
           </h3>
           <p
-            className="text-[10.5px] font-medium text-[#A7F3D0] mt-0.5 leading-none truncate"
+            className="text-[11.5px] sm:text-[12px] font-bold text-[#087F63] mt-0.5 leading-none truncate"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {tr(stats.mostOccurringRateType)}
@@ -6693,21 +6677,12 @@ function ByProductNationalCard({
         {/* Right Stack: 1) Special Attribute ON TOP, 2) Rate Count BELOW */}
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {stats.specialAttr && (
-            <div className="flex items-center gap-1 text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-white/10 border border-white/15 text-white/90 shadow-sm">
+            <div className="flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-[#E0F2FE] border border-[#BAE6FD] text-[#0369A1] shadow-sm">
               <span
-                className="w-1.5 h-1.5 rounded-full inline-block"
-                style={{ backgroundColor: stats.specialAttr.dotColor || '#38BDF8' }}
+                className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0"
+                style={{ backgroundColor: stats.specialAttr.dotColor || '#0284C7' }}
               />
-              <span
-                style={{
-                  color:
-                    stats.specialAttr.type === 'moisture'
-                      ? '#7DD3FC'
-                      : stats.specialAttr.type === 'newOld'
-                      ? '#FBBF24'
-                      : '#6EE7B7',
-                }}
-              >
+              <span className="whitespace-nowrap">
                 {lang === 'ur' ? stats.specialAttr.valueUr : stats.specialAttr.valueEn}
               </span>
             </div>
@@ -6721,18 +6696,14 @@ function ByProductNationalCard({
                 if (onMorePriceTypesClick) onMorePriceTypesClick();
                 else onClick();
               }}
-              className="tap-target flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border border-[#10B981]/60 text-white font-bold text-[8.5px] transition active:scale-95 shadow-sm"
-              style={{
-                background: 'rgba(3, 62, 49, 0.85)',
-                backdropFilter: 'blur(8px)',
-              }}
+              className="tap-target flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] text-[#065F46] font-bold text-[9px] transition active:scale-95 shadow-sm"
             >
               <span>
                 {lang === 'ur'
-                  ? '+' + toUrduDigits(stats.otherRateTypesCount)
-                  : '+' + stats.otherRateTypesCount}
+                  ? '+' + toUrduDigits(stats.otherRateTypesCount) + ' ریٹس'
+                  : '+' + stats.otherRateTypesCount + ' Rates'}
               </span>
-              <span className="text-[#34D399] font-bold text-[7.5px]">
+              <span className="text-[#087F63] font-black text-[8px]">
                 {lang === 'ur' ? '❮' : '❯'}
               </span>
             </button>
@@ -6740,61 +6711,82 @@ function ByProductNationalCard({
         </div>
       </div>
 
-      {/* Center 2x2 Metrics Grid (Compact for 2-column layout) */}
-      <div className="relative z-10 grid grid-cols-2 gap-x-2 gap-y-1.5 my-1.5 pt-0.5">
-        {/* Row 1, Col 1: Avg Min (STATIC, NO ANIMATION) */}
-        <div className="flex flex-col justify-center pr-1 border-r border-white/15">
-          <span className="text-[8.5px] font-medium text-white/70 leading-none">
-            {lang === 'ur' ? 'اوسط کم از کم' : 'Avg min'}
+      {/* Center 2x2 Metric Tiles (High Contrast for High Sunlight / Farmer Readability) */}
+      <div className="relative z-10 grid grid-cols-2 gap-1.5 sm:gap-2 my-2">
+        {/* 1. Avg Min */}
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+          <span
+            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
+            {lang === 'ur' ? 'اوسط کم' : 'Avg Min'}
           </span>
-          <span className="text-[13px] font-black text-white tracking-tight leading-tight my-0.5 truncate">
+          <span className="text-[14.5px] sm:text-[15.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5 truncate">
             {stats.hasData && stats.avgMin > 0
               ? lang === 'ur'
                 ? `روپے ${toUrduDigits(stats.avgMin.toLocaleString())}`
                 : `Rs ${stats.avgMin.toLocaleString()}`
               : '—'}
           </span>
-          <span className="text-[7.5px] font-medium text-white/55 leading-none">
+          <span
+            className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
-        {/* Row 1, Col 2: Avg Max (STATIC, NO ANIMATION) */}
-        <div className="flex flex-col justify-center pl-1">
-          <span className="text-[8.5px] font-medium text-white/70 leading-none">
-            {lang === 'ur' ? 'اوسط زیادہ' : 'Avg max'}
+        {/* 2. Avg Max */}
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+          <span
+            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
+            {lang === 'ur' ? 'اوسط زیادہ' : 'Avg Max'}
           </span>
-          <span className="text-[13px] font-black text-white tracking-tight leading-tight my-0.5 truncate">
+          <span className="text-[14.5px] sm:text-[15.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5 truncate">
             {stats.hasData && stats.avgMax > 0
               ? lang === 'ur'
                 ? `روپے ${toUrduDigits(stats.avgMax.toLocaleString())}`
                 : `Rs ${stats.avgMax.toLocaleString()}`
               : '—'}
           </span>
-          <span className="text-[7.5px] font-medium text-white/55 leading-none">
+          <span
+            className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
-        {/* Row 2, Col 1: Total Arrival */}
-        <div className="flex flex-col justify-center pr-1 border-r border-white/15">
-          <span className="text-[8.5px] font-medium text-white/70 leading-none">
-            {lang === 'ur' ? 'کل آمد' : 'Total arrival'}
+        {/* 3. Total Arrival (Bags only; '—' if missing) */}
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+          <span
+            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
+            {lang === 'ur' ? 'کل آمد' : 'Total Arrival'}
           </span>
-          <span className="text-[12.5px] font-black text-white tracking-tight leading-tight my-0.5 truncate">
-            {stats.hasData ? arrivalDisplay : '—'}
+          <span className="text-[13.5px] sm:text-[14.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5 truncate">
+            {arrivalDisplay}
           </span>
-          <span className="text-[7.5px] font-medium text-white/55 leading-none">
+          <span
+            className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
-        {/* Row 2, Col 2: Markets (ANIMATED COUNTER ONLY, NO "reporting" SUBTEXT) */}
-        <div className="flex flex-col justify-center pl-1">
-          <span className="text-[8.5px] font-medium text-white/70 leading-none">
-            {lang === 'ur' ? 'منڈیاں' : 'Markets'}
+        {/* 4. Locations (Animated Counter) */}
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+          <span
+            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
+            {lang === 'ur' ? 'مقامات' : 'Locations'}
           </span>
-          <span className="text-[13.5px] font-black text-[#6EE7B7] tracking-tight leading-tight my-0.5">
+          <span className="text-[14.5px] sm:text-[15.5px] font-black text-[#087F63] tracking-tight leading-tight my-0.5">
             {stats.hasData && stats.markets > 0 ? (
               <AnimatedCounter
                 target={stats.markets}
@@ -6805,37 +6797,43 @@ function ByProductNationalCard({
               '0'
             )}
           </span>
+          <span
+            className="text-[8.5px] sm:text-[9px] font-semibold text-[#64748B] leading-none"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
+            {lang === 'ur' ? 'پورے پاکستان سے' : 'All Pakistan'}
+          </span>
         </div>
       </div>
 
-      {/* Bottom Row: Timestamp on Left + BIGGER Crop Illustration in Bottom-Right */}
+      {/* Bottom Row: Timestamp on Left + Large Crop Illustration in Bottom-Right */}
       <div className="relative z-10 flex items-end justify-between pt-0.5">
-        <div className="flex items-center gap-0.5 text-[8.5px] font-medium text-white/65 pb-0.5">
+        <div className="flex items-center gap-1 text-[9.5px] font-bold text-[#52635F] pb-0.5">
           <svg
-            width="10"
-            height="10"
+            width="11"
+            height="11"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
+            stroke="#087F63"
+            strokeWidth="2.4"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-[#34D399] flex-shrink-0"
+            className="flex-shrink-0"
           >
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
           <span className="truncate">
-            {lang === 'ur' ? '۱۲ منٹ پہلے' : '12m ago'}
+            {lang === 'ur' ? 'تازہ ترین ۱۲ منٹ پہلے' : '12m ago'}
           </span>
         </div>
 
-        {/* BIGGER Crop Illustration (Prominent & sharp) */}
+        {/* Large Crisp Crop Illustration */}
         <div className="relative -mb-1 -mr-1 pointer-events-none flex-shrink-0">
           <img
             src={iconSrc}
             alt={stats.byproduct}
-            className="w-[58px] h-[58px] sm:w-[64px] sm:h-[64px] object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)] opacity-95 transition-transform duration-200"
+            className="w-[52px] h-[52px] sm:w-[58px] sm:h-[58px] object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.12)] transition-transform duration-200"
             loading="lazy"
           />
         </div>
@@ -6843,10 +6841,13 @@ function ByProductNationalCard({
 
       {/* No Data Overlay if hasData is false */}
       {!stats.hasData && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2 rounded-[20px] bg-[#02241C]/85 backdrop-blur-[2px] pointer-events-none">
-          <div className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-center shadow-md">
-            <span className="text-[10.5px] font-bold text-white/90">
-              {lang === 'ur' ? 'ڈیٹا دستیاب نہیں' : 'No Data'}
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2 rounded-[20px] bg-white/90 backdrop-blur-[2px] pointer-events-none">
+          <div className="px-3 py-1.5 rounded-xl bg-[#F1F7F4] border border-[#D1E5DC] text-center shadow-sm">
+            <span
+              className="text-xs font-bold text-[#143B33]"
+              style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+            >
+              {lang === 'ur' ? 'ڈیٹا دستیاب نہیں ہے' : 'No Data Available'}
             </span>
           </div>
         </div>
