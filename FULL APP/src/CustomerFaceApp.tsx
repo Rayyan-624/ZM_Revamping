@@ -6784,12 +6784,6 @@ function ByProductNationalCard({
               —
             </span>
           )}
-          <span
-            className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
-            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
-          >
-            {stats.hasData && stats.totalArrival > 0 ? (lang === 'ur' ? 'کل بوری' : 'Total Bags') : ''}
-          </span>
         </div>
 
         {/* 4. Locations (Count Only, e.g. 30+, NO "All Pakistan" text!) */}
@@ -11607,9 +11601,6 @@ function ProductRatesScreen({
                                   : statArrival.toLocaleString())
                                 : "—"}
                             </span>
-                            <span className="text-[7.5px] text-[#80918B] leading-none mt-0.5">
-                              {statArrival > 0 ? (lang === "ur" ? "کل بوری" : "Total Bags") : ""}
-                            </span>
                           </div>
                         </div>
                       </div>
@@ -11723,7 +11714,7 @@ function ProductRatesScreen({
                       const hasMoistureData = allRows.some((r) => r.moisture && r.moisture.trim().length > 0) || (attrMoisture !== null);
                       return (
                         <div className="grid grid-cols-2 divide-x divide-[#EEF3F0] pt-2 animate-fadeIn">
-                          {/* LEFT COLUMN: Color, Spec, Condition */}
+                          {/* LEFT COLUMN: Color, Spec, Variety */}
                           <div className="flex flex-col gap-y-1.5 pr-2.5">
                             {/* ROW 1: COLOR */}
                             <button
@@ -11795,47 +11786,7 @@ function ProductRatesScreen({
                               </svg>
                             </button>
 
-                            {/* ROW 3: CONDITION (when moisture exists) */}
-                            {hasMoistureData && (
-                              <button
-                                type="button"
-                                onClick={() => setAttrSheet("condition")}
-                                className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
-                              >
-                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                  <div
-                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                    style={{ background: "#CCFBF1", color: "#0D9488" }}
-                                  >
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                                    </svg>
-                                  </div>
-                                  <div className="min-w-0 flex-1 text-left">
-                                    <span
-                                      className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
-                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                                    >
-                                      {lang === "ur" ? "حالت" : "Condition"}
-                                    </span>
-                                    <span
-                                      className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#065F46]"
-                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                                    >
-                                      {attrCondition ? t(attrCondition) : "—"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
-                                  <polyline points="6 9 12 15 18 9" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-
-                          {/* RIGHT COLUMN: Variety, Quality, Moisture/Condition */}
-                          <div className="flex flex-col gap-y-1.5 pl-2.5">
-                            {/* ROW 1: VARIETY */}
+                            {/* ROW 3: VARIETY */}
                             <button
                               type="button"
                               onClick={() => setAttrSheet("variety")}
@@ -11869,8 +11820,11 @@ function ProductRatesScreen({
                                 <polyline points="6 9 12 15 18 9" />
                               </svg>
                             </button>
+                          </div>
 
-                            {/* ROW 2: QUALITY (NEW / OLD) */}
+                          {/* RIGHT COLUMN: Quality, Condition, Moisture */}
+                          <div className="flex flex-col gap-y-1.5 pl-2.5">
+                            {/* ROW 1: QUALITY (NEW / OLD) */}
                             <button
                               type="button"
                               onClick={() => setAttrSheet("newold")}
@@ -11906,8 +11860,43 @@ function ProductRatesScreen({
                               </svg>
                             </button>
 
-                            {/* ROW 3: MOISTURE or CONDITION */}
-                            {hasMoistureData ? (
+                            {/* ROW 2: CONDITION */}
+                            <button
+                              type="button"
+                              onClick={() => setAttrSheet("condition")}
+                              className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: "#CCFBF1", color: "#0D9488" }}
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                                  </svg>
+                                </div>
+                                <div className="min-w-0 flex-1 text-left">
+                                  <span
+                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                  >
+                                    {lang === "ur" ? "حالت" : "Condition"}
+                                  </span>
+                                  <span
+                                    className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#065F46]"
+                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                  >
+                                    {attrCondition ? t(attrCondition) : "—"}
+                                  </span>
+                                </div>
+                              </div>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                            </button>
+
+                            {/* ROW 3: MOISTURE (rendered if moisture data exists) */}
+                            {hasMoistureData && (
                               <button
                                 type="button"
                                 onClick={() => setAttrSheet("moisture")}
@@ -11942,40 +11931,6 @@ function ProductRatesScreen({
                                   </div>
                                 </div>
                                 <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
-                                  <polyline points="6 9 12 15 18 9" />
-                                </svg>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setAttrSheet("condition")}
-                                className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
-                              >
-                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                  <div
-                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                    style={{ background: "#CCFBF1", color: "#0D9488" }}
-                                  >
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                                    </svg>
-                                  </div>
-                                  <div className="min-w-0 flex-1 text-left">
-                                    <span
-                                      className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
-                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                                    >
-                                      {lang === "ur" ? "حالت" : "Condition"}
-                                    </span>
-                                    <span
-                                      className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#065F46]"
-                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                                    >
-                                      {attrCondition ? t(attrCondition) : "—"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
                                   <polyline points="6 9 12 15 18 9" />
                                 </svg>
                               </button>
