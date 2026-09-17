@@ -5471,17 +5471,73 @@ function SearchScreen({
   );
 }
 
-//  PRODUCT BYPRODUCT RESOLVER
-// Given a product selection captured from PRODUCT_DIVISIONS ({vertical:div.name,
-// product:product}), return its byproduct list. Falls back to VERTICALS.
-function productByproducts(vertical: string, product: string): string[] {
-  const div = PRODUCT_DIVISIONS.find((d) => d.name === vertical);
+function getProductSelectionsForDivision(divName: string): ProductSel[] {
+  const div = PRODUCT_DIVISIONS.find(
+    (d) => d.name === divName || d.name.toLowerCase() === divName.toLowerCase()
+  );
   if (div) {
-    if (div.type === "product") return div.byproducts ?? [];
-    const p = div.products?.[product];
-    if (p) return p;
+    if (div.type === "vertical" && div.products) {
+      return Object.keys(div.products).map((pName) => ({
+        vertical: div.name,
+        product: pName,
+      }));
+    }
+    const vName = getVerticalForProduct(div.name);
+    return [{ vertical: vName, product: div.name }];
   }
-  return VERTICALS[vertical]?.products[product] ?? [];
+  const vert = VERTICALS[divName];
+  if (vert && vert.products) {
+    return Object.keys(vert.products).map((pName) => ({
+      vertical: divName,
+      product: pName,
+    }));
+  }
+  const vName = getVerticalForProduct(divName);
+  return [{ vertical: vName, product: divName }];
+}
+
+function productByproducts(vertical: string, product: string): string[] {
+  // 1. Direct match in PRODUCT_DIVISIONS
+  const div = PRODUCT_DIVISIONS.find((d) => d.name === vertical || d.name === product);
+  if (div) {
+    if (div.type === "product" && div.byproducts && div.byproducts.length > 0) return div.byproducts;
+    if (div.products?.[product] && div.products[product].length > 0) return div.products[product];
+  }
+
+  // 2. Direct match in VERTICALS[vertical]
+  if (VERTICALS[vertical]?.products?.[product]?.length) {
+    return VERTICALS[vertical].products[product];
+  }
+
+  // 3. Scan all VERTICALS for this product
+  for (const vKey of Object.keys(VERTICALS)) {
+    if (VERTICALS[vKey]?.products?.[product]?.length) {
+      return VERTICALS[vKey].products[product];
+    }
+  }
+
+  // 4. Scan all PRODUCT_DIVISIONS for this product in their sub-products
+  for (const d of PRODUCT_DIVISIONS) {
+    if (d.products?.[product]?.length) {
+      return d.products[product];
+    }
+  }
+
+  // 5. Scan FLAT_ALL_MANDI_ROWS for any rows matching this product
+  const fromRows = Array.from(
+    new Set(
+      FLAT_ALL_MANDI_ROWS
+        .filter((r) => r.product.toLowerCase() === product.toLowerCase())
+        .map((r) => r.byproduct)
+        .filter(Boolean)
+    )
+  );
+  if (fromRows.length > 0) {
+    return fromRows;
+  }
+
+  // 6. Fallback to product itself
+  return [product];
 }
 
 //  product (PRODUCT) SELECT
@@ -6461,47 +6517,19 @@ function ByProductCombinedScreen({
 
   const { voiceEnabled, lang, tc: tcL, tm: tmL } = useLang();
 
-  // Location selector state
-  const [selectedLocs, setSelectedLocs] = useState<
-    {
-      kind: LocationScope['kind'];
-      label: string;
-    }[]
-  >(() => {
-    if (locationScope && locationScope.kind !== 'pakistan') {
-      return [locationScope];
-    }
-    return [];
-  });
+  const currentLocScope: LocationScope = locationScope || { kind: 'pakistan', label: 'All Pakistan' };
 
-  useEffect(() => {
-    if (locationScope) {
-      if (locationScope.kind === 'pakistan') {
-        setSelectedLocs([]);
-      } else {
-        setSelectedLocs([locationScope]);
-      }
-    }
-  }, [locationScope]);
-
-  const [locSheet, setLocSheet] = useState(false);
-  const currentLocScope: LocationScope =
-    selectedLocs.length === 0
-      ? locationScope || { kind: 'pakistan', label: 'All Pakistan' }
-      : selectedLocs[0];
-
-  const locLabel =
-    selectedLocs.length === 0
-      ? locationScope && locationScope.kind !== 'pakistan'
-        ? tmL(locationScope.label)
-        : lang === 'ur'
-        ? 'پاکستان'
-        : 'Pakistan'
-      : selectedLocs.length === 1
-      ? tmL(selectedLocs[0].label)
-      : lang === 'ur'
-      ? `${selectedLocs.length} مقامات`
-      : `${selectedLocs.length} Locations`;
+  // Gregorian + Lunar Islamic Date Object (2-line layout with dash)
+  const dateInfo = useMemo(() => {
+    const d = new Date(2026, 8, 14);
+    const islamic = getIslamicDate(d, lang);
+    return {
+      gregDayMonth: lang === 'ur' ? '۱۴ ستمبر' : '14 Sep',
+      gregYear: lang === 'ur' ? '۲۰۲۶' : '2026',
+      hijriDayMonth: lang === 'ur' ? `${toUrduDigits(islamic.day)} ${islamic.monthName}` : `${islamic.day} ${islamic.monthName}`,
+      hijriYear: lang === 'ur' ? `${toUrduDigits(islamic.year)} ھ` : `${islamic.year} A.H`,
+    };
+  }, [lang]);
 
   // Compute 1 summary card per by-product with 100% REAL calculated data
   const byproductCardsData = useMemo(() => {
@@ -6568,44 +6596,62 @@ function ByProductCombinedScreen({
             </div>
           </div>
 
-          {/* Location selector pill button */}
-          <button
-            onClick={() => setLocSheet(true)}
-            className="tap-target zm-beam-border flex-shrink-0 flex items-center gap-1.5 rounded-full font-bold text-xs px-3 py-1.5 text-[#075E4F] cursor-pointer active:scale-95 transition"
+          {/* Gregorian + Lunar Islamic Date Pill (2 Lines with Dash) */}
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-2xl flex-shrink-0"
             style={{
-              background: 'rgba(255, 255, 255, 0.75)',
+              background: 'rgba(255, 255, 255, 0.88)',
               backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
               border: '1.2px solid rgba(16, 185, 129, 0.45)',
               boxShadow: '0 2px 8px rgba(16, 185, 129, 0.12)',
             }}
           >
             <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="#075E4F"
-              className="text-[#075E4F] flex-shrink-0"
-            >
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-              <circle cx="12" cy="9" r="2.5" fill="#EAF5F0" />
-            </svg>
-            <span className="text-[11px] whitespace-nowrap font-bold text-[#075E4F]">
-              {locLabel}
-            </span>
-            <svg
-              width="8"
-              height="8"
+              width="13"
+              height="13"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
+              stroke="#075E4F"
+              strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="opacity-75 flex-shrink-0 text-[#075E4F]"
+              className="flex-shrink-0"
             >
-              <polyline points="6 9 12 15 18 9" />
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
-          </button>
+
+            <div
+              className="flex items-center gap-1.5 text-[#075E4F]"
+              style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+            >
+              {/* Left Column: Gregorian Date & Year */}
+              <div className="flex flex-col items-center leading-none">
+                <span className="text-[10px] font-extrabold whitespace-nowrap">
+                  {dateInfo.gregDayMonth}
+                </span>
+                <span className="text-[8.5px] font-bold text-[#087F63]/80 tracking-wide mt-0.5 whitespace-nowrap">
+                  {dateInfo.gregYear}
+                </span>
+              </div>
+
+              {/* Dash separator */}
+              <span className="text-xs font-bold text-[#10B981] pb-0.5">-</span>
+
+              {/* Right Column: Hijri Date & Year */}
+              <div className="flex flex-col items-center leading-none">
+                <span className="text-[10px] font-extrabold whitespace-nowrap">
+                  {dateInfo.hijriDayMonth}
+                </span>
+                <span className="text-[8.5px] font-bold text-[#087F63]/80 tracking-wide mt-0.5 whitespace-nowrap">
+                  {dateInfo.hijriYear}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Vertical Level Entry Filter Bar: ONLY rendered if entry is multi-product! */}
@@ -6700,21 +6746,7 @@ function ByProductCombinedScreen({
         )}
       </div>
 
-      {locSheet && (
-        <MultiLocSheet
-          selected={selectedLocs}
-          onApply={(locs) => {
-            setSelectedLocs(locs);
-            if (locs.length === 1 && onSelectLocation) {
-              onSelectLocation(locs[0]);
-            } else if (locs.length === 0 && onSelectLocation) {
-              onSelectLocation({ kind: 'pakistan', label: 'All Pakistan' });
-            }
-            setLocSheet(false);
-          }}
-          onClose={() => setLocSheet(false)}
-        />
-      )}
+
     </div>
   );
 }
@@ -9540,7 +9572,7 @@ function ProductRatesScreen({
   const [histOpen, setHistOpen] = useState(false);
   // Local location scope — starts from initialMandi if provided, else from parent
   const [locScope, setLocScope] = useState<LocationScope>(
-    initialMandi ? { kind: "mandi", label: initialMandi } : initialScope,
+    initialMandi ? { kind: "mandi", label: initialMandi } : initialScope || { kind: "pakistan", label: "All Pakistan" },
   );
   const [locSheet, setLocSheet] = useState(false);
   // Date filter
@@ -10216,6 +10248,15 @@ function ProductRatesScreen({
                   ? (tm(englishMandi).includes("منڈی") ? tm(englishMandi) : tm(englishMandi) + " منڈی")
                   : (englishMandi.includes("Mandi") ? englishMandi : englishMandi + " Mandi");
 
+              const locationButtonLabel =
+                locScope.kind === "pakistan"
+                  ? (lang === "ur" ? "پورا پاکستان" : "All Pakistan")
+                  : locScope.kind === "province"
+                  ? (lang === "ur" ? "صوبہ " + tm(locScope.label) : locScope.label + " Province")
+                  : locScope.kind === "district"
+                  ? (lang === "ur" ? "ضلع " + tm(locScope.label) : locScope.label + " District")
+                  : cleanMandiName;
+
               const mandiProvince =
                 locScope.kind === "province"
                   ? locScope.label
@@ -10550,7 +10591,7 @@ function ProductRatesScreen({
                                       : "inherit",
                                 }}
                               >
-                                {cleanMandiName}
+                                {locationButtonLabel}
                               </span>
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#087F63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
                                 <polyline points="6 9 12 15 18 9" />
@@ -14778,108 +14819,24 @@ function ProductRatesScreen({
           onClose={() => setHistOpen(false)}
         />
       )}
-      {locSheet &&
-        (() => {
-          // Only show mandis that have data under current filters (rate type aware)
-          const filteredForMandis = allRows.filter(
-            (r) => !attrRateType || r.rateType === attrRateType,
-          );
-          const availMandis = [
-            ...new Set(filteredForMandis.map((r) => r.mandiName)),
-          ];
-          return (
-            <div
-              className="zm-sheet-overlay"
-              style={{ zIndex: 250 }}
-              onClick={() => setLocSheet(false)}
-            >
-              <div
-                className="zm-sheet-high"
-                style={{ background: "#F4FAF7", maxHeight: "70vh" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div
-                  className="px-5 pt-4 pb-3 flex-shrink-0"
-                  style={{ borderBottom: "1px solid #D5E2DD" }}
-                >
-                  <div
-                    className="w-10 h-1 rounded-full mx-auto mb-3"
-                    style={{ background: "#C7D6D0" }}
-                  />
-                  <p
-                    className="font-bold text-lg"
-                    style={{
-                      fontSize: lang === "ur" ? 20 : 18,
-                      fontFamily:
-                        lang === "ur"
-                          ? URDU_FONT
-                          : "inherit",
-                    }}
-                  >
-                    {lang === "ur" ? "منڈی منتخب کریں" : "Select Mandi"}
-                  </p>
-                  <p
-                    className="text-xs mt-0.5"
-                    style={{
-                      color: "#52635F",
-                      fontSize: lang === "ur" ? 14 : 12,
-                      fontFamily:
-                        lang === "ur"
-                          ? URDU_FONT
-                          : "inherit",
-                    }}
-                  >
-                    {lang === "ur"
-                      ? `وہ منڈیاں جہاں ${tc(title)} دستیاب ہے`
-                      : `Mandis where ${title} is available`}
-                  </p>
-                </div>
-                <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2">
-                  {availMandis.map((mandiName) => {
-                    const isActive =
-                      locScope.kind === "mandi" && locScope.label === mandiName;
-                    return (
-                      <button
-                        key={mandiName}
-                        onClick={() => {
-                          setLocScope({ kind: "mandi", label: mandiName });
-                          setLocSheet(false);
-                        }}
-                        className="tap-target flex items-center gap-3 rounded-2xl px-4"
-                        style={{
-                          background: isActive ? "#E4F2EC" : "#F1F7F4",
-                          border: isActive
-                            ? "1.5px solid #087F63"
-                            : "1px solid #D5E2DD",
-                          minHeight: 48,
-                        }}
-                      >
-                        <span
-                          className={`flex-1 ${lang === "ur" ? "text-right" : "text-left"} font-semibold text-sm`}
-                          style={{
-                            color: isActive ? "#075E4F" : "#183B34",
-                            fontSize: lang === "ur" ? 17 : 14,
-                            fontFamily:
-                              lang === "ur"
-                                ? URDU_FONT
-                                : "inherit",
-                          }}
-                        >
-                          {tm(mandiName)}
-                        </span>
-                        {isActive && (
-                          <span style={{ color: "#087F63", fontWeight: 800 }}>
-                            ✓
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+      {locSheet && (
+        <MultiLocSheet
+          selected={
+            locScope && locScope.kind !== "pakistan"
+              ? [locScope]
+              : []
+          }
+          onApply={(locs) => {
+            if (locs.length === 0 || locs.some((x) => x.kind === "pakistan")) {
+              setLocScope({ kind: "pakistan", label: "All Pakistan" });
+            } else {
+              setLocScope(locs[0]);
+            }
+            setLocSheet(false);
+          }}
+          onClose={() => setLocSheet(false)}
+        />
+      )}
       {dateSheet && (
         <div
           className="zm-sheet-overlay"
@@ -20806,18 +20763,14 @@ function HomeScreen({
                   <button
                     key={div.name}
                     onClick={() =>
-                      handleOrientationTap("product", tc(div.name), () =>
+                      handleOrientationTap("product", tc(div.name), () => {
+                        const selProducts = getProductSelectionsForDivision(div.name);
                         push({
                           id: "byproduct-combined",
-                          products: [
-                            {
-                              vertical: verticalFor,
-                              product: div.name,
-                            },
-                          ],
+                          products: selProducts,
                           active: 0,
-                        }),
-                      )
+                        });
+                      })
                     }
                     className="flex-shrink-0 flex flex-col items-center tap-target"
                     style={{
