@@ -242,16 +242,42 @@ export function isMatchProduct(excelProd: string, targetProds: string | string[]
     if (t === "cotton" && (ep.includes("cotton") || ep.includes("phutti") || ep.includes("lint"))) return true;
     if (t === "paddy" && (ep === "rice" || ep.includes("paddy"))) return true;
     if (t === "rice" && (ep === "milled rice" || ep.includes("rice") || ep.includes("basmati") || ep.includes("irri"))) return true;
-    if (t === "mustard" && (ep === "edible oil" || ep.includes("mustard") || ep.includes("sarson") || ep.includes("raya") || ep.includes("canola"))) return true;
-    if (t === "canola" && (ep === "edible oil" || ep.includes("canola"))) return true;
-    if (t === "sunflower" && (ep === "edible oil" || ep.includes("sunflower"))) return true;
-    if (t === "soybean" && (ep === "edible oil" || ep.includes("soybean"))) return true;
-    if (t === "sesame" && (ep.includes("sesame") || ep.includes("til"))) return true;
-    if (t === "vegetables" && (ep === "vegetable" || ep.includes("vegetable"))) return true;
-    if (t === "dry fruits" && (ep === "dry-fruits" || ep.includes("dry"))) return true;
-    if (t === "spices" && (ep === "spices" || ep === "chillies" || ep.includes("spice") || ep.includes("chilli"))) return true;
-    if (t === "sugar" && (ep === "sugar" || ep.includes("sugar") || ep.includes("gur") || ep.includes("shakar"))) return true;
-    if (t === "pulses" && (ep.includes("gram") || ep.includes("dal") || ep.includes("daal") || ep.includes("moong") || ep.includes("mash") || ep.includes("masoor"))) return true;
+    if (
+      ["edible oil", "edible oils", "mustard", "canola", "sunflower", "soybean", "taara meera", "taramira", "arugula", "castor"].includes(t) &&
+      (ep === "edible oil" || ep.includes("oil") || ep.includes("mustard") || ep.includes("canola") || ep.includes("sunflower") || ep.includes("soybean") || ep.includes("sarson"))
+    ) return true;
+    if (
+      ["fruits", "fruit", "mango", "banana", "citrus", "apple", "orange", "melon", "peach", "apricot", "plum", "cherry", "grapes", "pomegranate", "papaya", "watermelon", "falsa"].includes(t) &&
+      (ep === "fruits" || ep.includes("fruit"))
+    ) return true;
+    if (
+      ["vegetable", "vegetables", "potato", "tomato", "onion", "garlic", "ginger", "chilli", "chillies", "cucumber", "brinjal", "okra", "cabbage", "cauliflower", "pea", "lemon", "carrot", "spinach", "turnip"].includes(t) &&
+      (ep === "vegetable" || ep === "chillies" || ep.includes("veg"))
+    ) return true;
+    if (
+      ["dry fruit", "dry fruits", "dry-fruits", "almond", "walnut", "pistachio", "cashew", "fig", "raisins"].includes(t) &&
+      (ep === "dry-fruits" || ep.includes("dry"))
+    ) return true;
+    if (
+      ["spices", "spice"].includes(t) &&
+      (ep === "spices" || ep === "chillies" || ep.includes("spice") || ep.includes("chilli"))
+    ) return true;
+    if (
+      ["sugar", "gur", "shakar"].includes(t) &&
+      (ep === "sugar" || ep.includes("sugar") || ep.includes("gur") || ep.includes("shakar"))
+    ) return true;
+    if (
+      ["pulses", "pulse", "gram", "moong", "mash", "masoor"].includes(t) &&
+      (ep === "pulses" || ep.includes("gram") || ep.includes("dal") || ep.includes("daal") || ep.includes("moong") || ep.includes("mash") || ep.includes("masoor"))
+    ) return true;
+    if (
+      ["herbs", "herbals", "hing", "ispaghol", "kalonji"].includes(t) &&
+      (ep === "herbals" || ep.includes("herb"))
+    ) return true;
+    if (
+      ["kiryana", "clarified butter", "ghee"].includes(t) &&
+      (ep === "clarified butter" || ep === "sugar" || ep === "spices" || ep === "pulses")
+    ) return true;
     return false;
   });
 }
@@ -5924,7 +5950,471 @@ function DatePickerSheet({
   );
 }
 
-//  BY-PRODUCT COMBINED (product chip-tabs → byproducts)
+// ─── HIGH PERFORMANCE BY-PRODUCT NATIONAL SUMMARY CALCULATION ENGINE ────────
+
+export interface SpecialAttrInfo {
+  type: 'moisture' | 'newOld' | 'variety' | 'spec' | 'quality';
+  labelEn: string;
+  labelUr: string;
+  valueEn: string;
+  valueUr: string;
+  dotColor?: string;
+}
+
+export interface SpecialAttrInfo {
+  type: 'moisture' | 'newOld' | 'variety' | 'spec' | 'quality';
+  labelEn: string;
+  labelUr: string;
+  valueEn: string;
+  valueUr: string;
+  dotColor?: string;
+}
+
+export interface ByproductNationalStats {
+  hasData: boolean;
+  product: string;
+  byproduct: string;
+  mostOccurringRateType: string;
+  otherRateTypesCount: number;
+  allRateTypes: string[];
+  avgMin: number;
+  avgMax: number;
+  totalArrival: number;
+  markets: number;
+  specialAttr: SpecialAttrInfo | null;
+}
+
+export function calculateByproductSummary(
+  targetProduct: string,
+  targetByproduct: string,
+  locationScope?: LocationScope
+): ByproductNationalStats {
+  const pRows = getRowsForProducts([targetProduct]);
+  const matchRows = pRows.filter((r) => {
+    if (!isMatchByproduct(r.byproduct, targetByproduct)) return false;
+    if (locationScope && locationScope.kind !== 'pakistan') {
+      if (
+        locationScope.kind === 'province' &&
+        r.province.toLowerCase() !== locationScope.label.toLowerCase()
+      )
+        return false;
+      if (
+        locationScope.kind === 'district' &&
+        r.mandiCity.toLowerCase() !== locationScope.label.toLowerCase() &&
+        !r.mandiName.toLowerCase().includes(locationScope.label.toLowerCase())
+      )
+        return false;
+      if (
+        locationScope.kind === 'mandi' &&
+        r.mandiName.toLowerCase() !== locationScope.label.toLowerCase() &&
+        r.mandiCity.toLowerCase() !== locationScope.label.toLowerCase()
+      )
+        return false;
+    }
+    return true;
+  });
+
+  if (matchRows.length === 0) {
+    return {
+      hasData: false,
+      product: targetProduct,
+      byproduct: targetByproduct,
+      mostOccurringRateType: 'Mandi Rate',
+      otherRateTypesCount: 0,
+      allRateTypes: ['Mandi Rate'],
+      avgMin: 0,
+      avgMax: 0,
+      totalArrival: 0,
+      markets: 0,
+      specialAttr: null,
+    };
+  }
+
+  // Count occurrences of price types in 1-month data
+  const rtCounts: Record<string, number> = {};
+  for (let i = 0; i < matchRows.length; i++) {
+    const rt = matchRows[i].rateType || 'Mandi Rate';
+    rtCounts[rt] = (rtCounts[rt] || 0) + 1;
+  }
+  const sortedRts = Object.entries(rtCounts).sort((a, b) => b[1] - a[1]);
+  const mostOccurringRateType = sortedRts[0]?.[0] || 'Mandi Rate';
+  const distinctRateTypes = Object.keys(rtCounts);
+
+  // Rows for most occurring rate type
+  const rtRows = matchRows.filter(
+    (r) => (r.rateType || 'Mandi Rate') === mostOccurringRateType
+  );
+
+  const validMins = rtRows
+    .map((r) => r.min)
+    .filter((v) => typeof v === 'number' && v > 0);
+  const validMaxs = rtRows
+    .map((r) => r.max)
+    .filter((v) => typeof v === 'number' && v > 0);
+  const avgMin = validMins.length
+    ? Math.round(validMins.reduce((a, b) => a + b, 0) / validMins.length)
+    : 0;
+  const avgMax = validMaxs.length
+    ? Math.round(validMaxs.reduce((a, b) => a + b, 0) / validMaxs.length)
+    : 0;
+
+  let totalArrival = 0;
+  for (let i = 0; i < rtRows.length; i++) {
+    const a = rtRows[i].arrival;
+    if (typeof a === 'number') {
+      totalArrival += a;
+    } else if (typeof a === 'string') {
+      const m = a.match(/^([0-9,]+)/);
+      if (m) totalArrival += parseInt(m[1].replace(/,/g, ''), 10) || 0;
+    }
+  }
+
+  const markets = new Set(rtRows.map((r) => r.mandiName || r.mandiCity)).size;
+
+  // Extract real dominant special attribute (priority: moisture -> new/old -> variety -> spec)
+  let specialAttr: SpecialAttrInfo | null = null;
+
+  // 1. Moisture (e.g. Maize, Mustard Seed)
+  const moistureCounts: Record<string, number> = {};
+  for (let i = 0; i < rtRows.length; i++) {
+    const m = rtRows[i].moisture;
+    if (m && typeof m === 'string' && m.trim()) {
+      moistureCounts[m.trim()] = (moistureCounts[m.trim()] || 0) + 1;
+    }
+  }
+  const sortedMoistures = Object.entries(moistureCounts).sort((a, b) => b[1] - a[1]);
+  if (sortedMoistures.length > 0) {
+    const val = sortedMoistures[0][0];
+    specialAttr = {
+      type: 'moisture',
+      labelEn: 'Moisture',
+      labelUr: 'نمی',
+      valueEn: String(val).includes('%') ? String(val) : String(val) + '%',
+      valueUr: String(val).includes('٪') ? toUrduDigits(val) : toUrduDigits(val) + '٪',
+      dotColor: '#38BDF8',
+    };
+  }
+
+  // 2. New / Old (e.g. Wheat, Cotton, Rice, Potato, Onion, Canola Seed)
+  if (!specialAttr) {
+    const newOldCounts: Record<string, number> = {};
+    for (let i = 0; i < rtRows.length; i++) {
+      const no = rtRows[i].newOld;
+      if (no && typeof no === 'string' && no.trim()) {
+        newOldCounts[no.trim()] = (newOldCounts[no.trim()] || 0) + 1;
+      }
+    }
+    const sortedNewOld = Object.entries(newOldCounts).sort((a, b) => b[1] - a[1]);
+    if (sortedNewOld.length > 0) {
+      const val = sortedNewOld[0][0];
+      const isNew = val.toLowerCase().includes('new');
+      specialAttr = {
+        type: 'newOld',
+        labelEn: 'Type',
+        labelUr: 'معیار',
+        valueEn: isNew ? 'New' : 'Old',
+        valueUr: isNew ? 'نیا' : 'پرانا',
+        dotColor: '#F59E0B',
+      };
+    }
+  }
+
+  // 3. Variety (e.g. Chillies, Garlic)
+  if (!specialAttr) {
+    const varietyCounts: Record<string, number> = {};
+    for (let i = 0; i < rtRows.length; i++) {
+      const v = rtRows[i].variety;
+      if (v && typeof v === 'string' && v.trim()) {
+        varietyCounts[v.trim()] = (varietyCounts[v.trim()] || 0) + 1;
+      }
+    }
+    const sortedVariety = Object.entries(varietyCounts).sort((a, b) => b[1] - a[1]);
+    if (sortedVariety.length > 0) {
+      const val = sortedVariety[0][0];
+      specialAttr = {
+        type: 'variety',
+        labelEn: 'Variety',
+        labelUr: 'قسم',
+        valueEn: val,
+        valueUr: val,
+        dotColor: '#10B981',
+      };
+    }
+  }
+
+  // 4. Spec (e.g. Dry)
+  if (!specialAttr) {
+    const specCounts: Record<string, number> = {};
+    for (let i = 0; i < rtRows.length; i++) {
+      const sp = rtRows[i].spec;
+      if (sp && typeof sp === 'string' && sp.trim()) {
+        specCounts[sp.trim()] = (specCounts[sp.trim()] || 0) + 1;
+      }
+    }
+    const sortedSpec = Object.entries(specCounts).sort((a, b) => b[1] - a[1]);
+    if (sortedSpec.length > 0) {
+      const val = sortedSpec[0][0];
+      specialAttr = {
+        type: 'spec',
+        labelEn: 'Spec',
+        labelUr: 'تفصیل',
+        valueEn: val,
+        valueUr: val,
+        dotColor: '#10B981',
+      };
+    }
+  }
+
+  return {
+    hasData: true,
+    product: targetProduct,
+    byproduct: targetByproduct,
+    mostOccurringRateType,
+    otherRateTypesCount: Math.max(0, distinctRateTypes.length - 1),
+    allRateTypes: distinctRateTypes,
+    avgMin,
+    avgMax,
+    totalArrival,
+    markets,
+    specialAttr,
+  };
+}
+
+// ─── NEW FIGMA BY-PRODUCT NATIONAL CARD COMPONENT ───────────────────────────
+
+function ByProductNationalCard({
+  stats,
+  vertical,
+  onClick,
+  onMorePriceTypesClick,
+}: {
+  stats: ByproductNationalStats;
+  vertical?: string;
+  onClick: () => void;
+  onMorePriceTypesClick?: () => void;
+}) {
+  const { lang, tc, tr } = useLang();
+  const iconSrc = getproductIconSrc(stats.byproduct, vertical);
+
+  // Format arrival e.g. 920 t or 3,400 Bags
+  const arrivalDisplay =
+    stats.totalArrival > 0
+      ? stats.totalArrival >= 1000
+        ? Math.round(stats.totalArrival / 25).toLocaleString() + ' t'
+        : stats.totalArrival.toLocaleString() + ' Bags'
+      : '—';
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => e.key === 'Enter' && onClick()}
+      className="relative w-full rounded-[26px] overflow-hidden text-white transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-lg mb-3.5 select-none"
+      style={{
+        background:
+          'linear-gradient(150deg, #034839 0%, #02362A 55%, #01241C 100%)',
+        border: '1.5px solid rgba(52, 211, 153, 0.45)',
+        boxShadow:
+          '0 12px 28px rgba(2, 44, 34, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+        padding: '20px 20px 16px',
+        minHeight: 250,
+      }}
+    >
+      {/* Concentric Circle Pattern in bottom-right corner */}
+      <div
+        className="absolute -bottom-16 -right-16 pointer-events-none rounded-full"
+        style={{
+          width: 240,
+          height: 240,
+          border: '2px solid rgba(52, 211, 153, 0.12)',
+          boxShadow:
+            'inset 0 0 0 28px rgba(52, 211, 153, 0.05), inset 0 0 0 60px rgba(52, 211, 153, 0.03)',
+          zIndex: 0,
+        }}
+      />
+
+      {/* Top Header Row */}
+      <div className="relative z-10 flex items-start justify-between gap-2">
+        <div>
+          <h3
+            className="text-[26px] font-black text-white leading-tight tracking-tight"
+            style={{
+              fontFamily: lang === 'ur' ? URDU_FONT : "'Inter', sans-serif",
+            }}
+          >
+            {tc(stats.byproduct)}
+          </h3>
+          <p
+            className="text-[13px] font-medium text-[#A7F3D0] mt-0.5"
+            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+          >
+            {tr(stats.mostOccurringRateType)}
+          </p>
+        </div>
+
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          {stats.specialAttr && (
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/90 pr-1">
+              <span>{lang === 'ur' ? stats.specialAttr.labelUr : stats.specialAttr.labelEn}</span>
+              <span
+                className="w-2 h-2 rounded-full inline-block shadow-sm"
+                style={{ backgroundColor: stats.specialAttr.dotColor || '#38BDF8' }}
+              />
+              <span
+                style={{
+                  color:
+                    stats.specialAttr.type === 'moisture'
+                      ? '#7DD3FC'
+                      : stats.specialAttr.type === 'newOld'
+                      ? '#FBBF24'
+                      : '#6EE7B7',
+                }}
+              >
+                {lang === 'ur' ? stats.specialAttr.valueUr : stats.specialAttr.valueEn}
+              </span>
+            </div>
+          )}
+
+          {stats.otherRateTypesCount > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onMorePriceTypesClick) onMorePriceTypesClick();
+                else onClick();
+              }}
+              className="tap-target flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#10B981]/60 text-white font-bold text-[11px] transition active:scale-95 shadow-sm"
+              style={{
+                background: 'rgba(3, 62, 49, 0.85)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <span>
+                {lang === 'ur'
+                  ? 'مزید ' + toUrduDigits(stats.otherRateTypesCount) + '+ ریٹس دیکھیں'
+                  : 'View +' + stats.otherRateTypesCount + ' More Price Types'}
+              </span>
+              <span className="text-[#34D399] font-black text-xs">
+                {lang === 'ur' ? '❮' : '❯'}
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Center 2x2 Metrics Grid */}
+      <div className="relative z-10 grid grid-cols-2 gap-x-4 gap-y-3.5 my-4 pt-1">
+        {/* Row 1, Col 1: Avg Min */}
+        <div className="flex flex-col justify-center pr-2 border-r border-white/15">
+          <span className="text-[11.5px] font-medium text-white/70">
+            {lang === 'ur' ? 'اوسط کم از کم' : 'Avg min'}
+          </span>
+          <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
+            {stats.hasData && stats.avgMin > 0
+              ? lang === 'ur'
+                ? toUrduDigits(stats.avgMin.toLocaleString()) + ' روپے'
+                : 'Rs ' + stats.avgMin.toLocaleString()
+              : '—'}
+          </span>
+          <span className="text-[11px] font-medium text-white/60">
+            {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
+          </span>
+        </div>
+
+        {/* Row 1, Col 2: Avg Max */}
+        <div className="flex flex-col justify-center pl-2">
+          <span className="text-[11.5px] font-medium text-white/70">
+            {lang === 'ur' ? 'اوسط زیادہ سے زیادہ' : 'Avg max'}
+          </span>
+          <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
+            {stats.hasData && stats.avgMax > 0
+              ? lang === 'ur'
+                ? toUrduDigits(stats.avgMax.toLocaleString()) + ' روپے'
+                : 'Rs ' + stats.avgMax.toLocaleString()
+              : '—'}
+          </span>
+          <span className="text-[11px] font-medium text-white/60">
+            {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
+          </span>
+        </div>
+
+        {/* Row 2, Col 1: Total Arrival */}
+        <div className="flex flex-col justify-center pr-2 border-r border-white/15">
+          <span className="text-[11.5px] font-medium text-white/70">
+            {lang === 'ur' ? 'کل آمد' : 'Total arrival'}
+          </span>
+          <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
+            {stats.hasData ? arrivalDisplay : '—'}
+          </span>
+          <span className="text-[11px] font-medium text-white/60">
+            {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
+          </span>
+        </div>
+
+        {/* Row 2, Col 2: Markets */}
+        <div className="flex flex-col justify-center pl-2">
+          <span className="text-[22px] font-black text-white tracking-tight leading-none mt-2 mb-0.5">
+            {stats.hasData && stats.markets > 0
+              ? lang === 'ur'
+                ? toUrduDigits(stats.markets) + '+'
+                : stats.markets + '+'
+              : '0'}
+          </span>
+          <span className="text-[12px] font-semibold text-white/80">
+            {lang === 'ur' ? 'منڈیاں / مارکیٹس' : 'Markets'}
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom Row */}
+      <div className="relative z-10 flex items-end justify-between pt-1">
+        <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-white/70 pb-1">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-[#34D399]"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>
+            {lang === 'ur' ? 'تازہ ترین ۱۲ منٹ پہلے' : 'Updated 12m ago'}
+          </span>
+        </div>
+
+        {/* Crop Illustration */}
+        <div className="relative -mb-1 -mr-1 pointer-events-none">
+          <img
+            src={iconSrc}
+            alt={stats.byproduct}
+            className="w-24 h-24 object-contain drop-shadow-md"
+            loading="lazy"
+          />
+        </div>
+      </div>
+
+      {/* No Data Overlay if hasData is false */}
+      {!stats.hasData && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 rounded-[26px] bg-[#02241C]/80 backdrop-blur-[2px] pointer-events-none">
+          <div className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-center shadow-md">
+            <span className="text-sm font-bold text-white/90">
+              {lang === 'ur' ? 'ڈیٹا دستیاب نہیں ہے' : 'No Data Available'}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── REVAMPED BY-PRODUCT COMBINED SCREEN (1 CARD PER BY-PRODUCT) ────────────
 
 function ByProductCombinedScreen({
   products,
@@ -5953,156 +6443,40 @@ function ByProductCombinedScreen({
   profileCompleted?: boolean;
   onOpenSubscribe?: () => void;
 }) {
-  const idx = Math.min(active, products.length - 1);
-  const [showAllProducts, setShowAllProducts] = useState(false);
+  const idx = Math.min(active, Math.max(0, products.length - 1));
   const activeProduct = products[idx] ?? products[0];
-  const activeproducts = showAllProducts
-    ? products.map((p) => p.product)
-    : [activeProduct?.product || products[0]?.product || ""];
 
   const setActive = (i: number) => {
-    setShowAllProducts(false);
-    replace({ id: "byproduct-combined", products, active: i });
+    replace({ id: 'byproduct-combined', products, active: i });
   };
+
+  // Whether entry is Vertical Level (multiple products) vs Product Level (single product)
+  const isVerticalLevelEntry = products.length > 1;
+
   const byproducts = activeProduct
     ? productByproducts(activeProduct.vertical, activeProduct.product)
     : products
-      .flatMap((p) => productByproducts(p.vertical, p.product))
-      .filter((b, i, a) => a.indexOf(b) === i);
+        .flatMap((p) => productByproducts(p.vertical, p.product))
+        .filter((b, i, a) => a.indexOf(b) === i);
 
+  const { voiceEnabled, lang, tc: tcL, tm: tmL } = useLang();
 
-  // Date scroll system - restricted to 2 days (Today & Yesterday) for non-subscribers
-  const { voiceEnabled, lang, t: tL, tc: tcL, tm: tmL, tr: trL } = useLang();
-
-  const BASE_DATE = new Date(2026, 8, 14); // Sep 14 2026 = today
-  const NUM_DAYS = 31; // Full 31-day authentic dataset from Aug 15 to Sep 14, 2026
-
-  const dateForOffset = (offset: number) => {
-    const d = new Date(BASE_DATE);
-    d.setDate(d.getDate() - offset);
-    return d;
-  };
-
-  const [currentVisibleDate, setCurrentVisibleDate] = useState<Date>(() => dateForOffset(0));
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const dateSectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-
-  const dateLabel = (d: Date) => {
-    const months = [
-      "JAN",
-      "FEB",
-      "MAR",
-      "APR",
-      "MAY",
-      "JUN",
-      "JUL",
-      "AUG",
-      "SEP",
-      "OCT",
-      "NOV",
-      "DEC",
-    ];
-    return { d: d.getDate(), month: months[d.getMonth()] };
-  };
-
-  const visibleDateLabel = useMemo(() => dateLabel(currentVisibleDate), [currentVisibleDate]);
-  const islamicDate = useMemo(() => getIslamicDate(currentVisibleDate, lang), [currentVisibleDate, lang]);
-  const monthsUr = [
-    "جنوری",
-    "فروری",
-    "مارچ",
-    "اپریل",
-    "مئی",
-    "جون",
-    "جولائی",
-    "اگست",
-    "ستمبر",
-    "اکتوبر",
-    "نومبر",
-    "دسمبر",
-  ];
-  const weekdaysUr = ["اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ"];
-  const weekdaysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  const dateLabelStr = (d: Date) =>
-    `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-  const dateDisplayStr = (d: Date) => {
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    if (lang === "ur") {
-      return `${toUrduDigits(d.getDate())} ${monthsUr[d.getMonth()]} ${toUrduDigits(d.getFullYear())}`;
-    }
-    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  };
-
-  const handleScrollArea = useCallback(() => {
-    const container = scrollAreaRef.current;
-    if (!container) return;
-    const containerTop = container.getBoundingClientRect().top;
-    let foundDate = dateForOffset(0);
-    dateSectionRefs.current.forEach((el, key) => {
-      const rect = el.getBoundingClientRect();
-      if (rect.top - containerTop <= 80) {
-        const parts = key.split("-");
-        const dObj = new Date(
-          parseInt(parts[0]),
-          parseInt(parts[1]),
-          parseInt(parts[2]),
-        );
-        foundDate = dObj;
-      }
-    });
-    setCurrentVisibleDate((prev) => {
-      if (
-        prev.getFullYear() === foundDate.getFullYear() &&
-        prev.getMonth() === foundDate.getMonth() &&
-        prev.getDate() === foundDate.getDate()
-      ) {
-        return prev;
-      }
-      return foundDate;
-    });
-  }, []);
-
-  useEffect(() => {
-    const el = scrollAreaRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", handleScrollArea, { passive: true });
-    return () => el.removeEventListener("scroll", handleScrollArea);
-  }, [handleScrollArea]);
-
-  //  Filter state
-  const [selectedBP, setSelectedBP] = useState<string | null>(null);
-  const [selectedRateTypes, setSelectedRateTypes] = useState<string[]>([]);
-  // Location: multi-select — array of selected location labels (empty = All Pakistan)
+  // Location selector state
   const [selectedLocs, setSelectedLocs] = useState<
     {
-      kind: LocationScope["kind"];
+      kind: LocationScope['kind'];
       label: string;
     }[]
   >(() => {
-    if (locationScope && locationScope.kind !== "pakistan") {
+    if (locationScope && locationScope.kind !== 'pakistan') {
       return [locationScope];
     }
     return [];
   });
 
-  // Synchronize with locationScope prop whenever it changes
   useEffect(() => {
     if (locationScope) {
-      if (locationScope.kind === "pakistan") {
+      if (locationScope.kind === 'pakistan') {
         setSelectedLocs([]);
       } else {
         setSelectedLocs([locationScope]);
@@ -6111,958 +6485,219 @@ function ByProductCombinedScreen({
   }, [locationScope]);
 
   const [locSheet, setLocSheet] = useState(false);
-  // Derive single locScope for inLocScope fn — if multi selected, show all matching
-  const locScope: LocationScope =
+  const currentLocScope: LocationScope =
     selectedLocs.length === 0
-      ? (locationScope || { kind: "pakistan", label: "All Pakistan" })
+      ? locationScope || { kind: 'pakistan', label: 'All Pakistan' }
       : selectedLocs[0];
-
-  // Derive active province from selected locations or parent locationScope prop
-  const activeProvince = useMemo(() => {
-    if (selectedLocs.length > 0) {
-      const provs = Array.from(
-        new Set(selectedLocs.map(getProvinceFromLoc).filter(Boolean)),
-      ) as string[];
-      if (provs.length === 1) return provs[0];
-      if (provs.length > 1) return null;
-    }
-    if (locationScope && locationScope.kind !== "pakistan") {
-      const p = getProvinceFromLoc(locationScope);
-      if (p) return p;
-    }
-    return null;
-  }, [selectedLocs, locationScope]);
-
-  const isAllPakistan = !activeProvince;
-  const screenBg = isAllPakistan
-    ? PROVINCE_BG["Pakistan"]
-    : (activeProvince ? PROVINCE_BG[activeProvince] : PROVINCE_BG["Pakistan"]);
-
-  // Reset byproduct filter when active product changes
-  const prevIdx = useRef(idx);
-  useEffect(() => {
-    if (prevIdx.current !== idx) {
-      setSelectedBP(null);
-      prevIdx.current = idx;
-    }
-  }, [idx]);
-
-  const handleCardTap = (r: RichRow, bp: string, navigateFn: () => void) => {
-    if (voiceEnabled) {
-      const selectedItemName = bp || r.product;
-      const bpName = tcL(selectedItemName);
-      const mandiName = tmL(r.mandiName);
-      const text =
-        lang === "ur"
-          ? `${bpName} ${mandiName}`
-          : `${selectedItemName} ${r.mandiName}`;
-      speakText(text);
-      setTimeout(() => {
-        navigateFn();
-      }, 850);
-      return;
-    }
-    navigateFn();
-  };
-
-  const activeBPs = selectedBP ? [selectedBP] : byproducts;
-
-  // Check if a mandi row is in the current location scope (multi-select aware and locationScope aware)
-  const inLocScope = (
-    mandiName: string,
-    mandiCity: string,
-    province: string,
-  ) => {
-    const locsToCheck =
-      selectedLocs.length > 0
-        ? selectedLocs
-        : (locationScope && locationScope.kind !== "pakistan" ? [locationScope] : []);
-
-    if (locsToCheck.length === 0) return true;
-    return locsToCheck.some((loc) => {
-      switch (loc.kind) {
-        case "pakistan":
-          return true;
-        case "province":
-          return province.toLowerCase() === loc.label.toLowerCase();
-        case "district":
-          return (
-            mandiCity.toLowerCase() === loc.label.toLowerCase() ||
-            mandiName.toLowerCase().includes(loc.label.toLowerCase())
-          );
-        case "mandi":
-          return (
-            mandiName.toLowerCase() === loc.label.toLowerCase() ||
-            mandiCity.toLowerCase() === loc.label.toLowerCase()
-          );
-      }
-    });
-  };
-
-  // Robust agricultural matcher between App Verticals and 40k Excel records
-  const isMatchProduct = (excelProd: string, targetProds: string[]): boolean => {
-    if (!excelProd || targetProds.length === 0) return true;
-    const ep = excelProd.toLowerCase().trim();
-    return targetProds.some((tp) => {
-      const t = tp.toLowerCase().trim();
-      if (ep === t || ep.includes(t) || t.includes(ep)) return true;
-      if (t === "cotton" && ep.includes("cotton")) return true;
-      if (t === "paddy" && (ep === "rice" || ep.includes("paddy"))) return true;
-      if (t === "rice" && (ep === "milled rice" || ep.includes("rice"))) return true;
-      if (t === "mustard" && (ep === "edible oil" || ep.includes("mustard"))) return true;
-      if (t === "canola" && (ep === "edible oil" || ep.includes("canola"))) return true;
-      if (t === "sunflower" && (ep === "edible oil" || ep.includes("sunflower"))) return true;
-      if (t === "soybean" && (ep === "edible oil" || ep.includes("soybean"))) return true;
-      if (t === "vegetables" && (ep === "vegetable" || ep.includes("vegetable"))) return true;
-      if (t === "dry fruits" && (ep === "dry-fruits" || ep.includes("dry"))) return true;
-      if (t === "spices" && (ep === "spices" || ep === "chillies" || ep.includes("spice") || ep.includes("chilli"))) return true;
-      if (t === "sugar" && (ep === "sugar" || ep.includes("sugar"))) return true;
-      return false;
-    });
-  };
-
-  const isMatchByproduct = (excelBp: string, targetBp: string): boolean => {
-    if (!targetBp || !excelBp) return true;
-    const e = excelBp.toLowerCase().replace(/[-_()]/g, " ").replace(/\s+/g, " ").trim();
-    const t = targetBp.toLowerCase().replace(/[-_()]/g, " ").replace(/\s+/g, " ").trim();
-    if (e === t || e.includes(t) || t.includes(e)) return true;
-
-    // Agricultural synonyms
-    if ((t.includes("flour") || t.includes("atta")) && (e.includes("flour") || e.includes("atta"))) return true;
-    if ((t.includes("bran") || t.includes("choker")) && (e.includes("bran") || e.includes("choker"))) return true;
-    if ((t.includes("straw") || t.includes("bhoosa")) && (e.includes("straw") || e.includes("bhoosa"))) return true;
-    if ((t.includes("sooji") || t.includes("semolina")) && (e.includes("sooji") || e.includes("semolina"))) return true;
-    if ((t.includes("maida") || t.includes("fine flour")) && (e.includes("maida") || e.includes("fine flour") || e.includes("refined flour"))) return true;
-    if (t.includes("grade a") && e.includes("grade a")) return true;
-    if (t.includes("grade b") && e.includes("grade b")) return true;
-    if (t.includes("grade c") && e.includes("grade c")) return true;
-    return false;
-  };
-
-  // Fast indexed rows for active product(s) — computed in 0ms!
-  const activeProductRows = useMemo(() => {
-    return getRowsForProducts(activeproducts);
-  }, [activeproducts]);
-
-  // Build best representative rate row for a byproduct — instant 0ms lookup
-  const buildRepRow = (bp: string, bpIndex: number = 0): { row: RichRow; hasData: boolean } => {
-    const noData: RichRow = {
-      product: activeProduct?.product || "",
-      byproduct: bp,
-      emoji: "",
-      rateType: "—",
-      arrival: "—",
-      min: 0,
-      max: 0,
-      trend: "stable",
-      trendPct: 0,
-      mandiName: "—",
-      mandiCity: "—",
-      province: "Punjab",
-      vertical: activeProduct?.vertical || "Grains",
-    };
-
-    const fromMandi = activeProductRows.filter((r) => {
-      if (!inLocScope(r.mandiName, r.mandiCity, r.province)) return false;
-      if (bp && !isMatchByproduct(r.byproduct, bp)) return false;
-      if (selectedRateTypes.length > 0 && !selectedRateTypes.includes(r.rateType)) return false;
-      return true;
-    });
-
-    if (fromMandi.length > 0) {
-      if (isAllPakistan) {
-        const provCycle = ["Punjab", "Sindh", "KPK", "Balochistan"];
-        const targetProv = provCycle[bpIndex % provCycle.length];
-        const matchProv = fromMandi.find(
-          (r) => r.province.toLowerCase() === targetProv.toLowerCase(),
-        );
-        if (matchProv) return { row: matchProv, hasData: true };
-      }
-      return { row: fromMandi[0], hasData: true };
-    }
-
-    const fromFeed = FEED_MESSAGES.filter(
-      (m) =>
-        activeproducts.includes(m.product) &&
-        (!bp || m.byproduct === bp) &&
-        (selectedRateTypes.length === 0 ||
-          selectedRateTypes.includes(m.rateType)) &&
-        inLocScope(m.station, m.station, m.province),
-    );
-    if (fromFeed.length > 0) {
-      const m = fromFeed[0];
-      return {
-        hasData: true,
-        row: {
-          product: m.product,
-          byproduct: m.byproduct,
-          emoji: "",
-          rateType: m.rateType,
-          arrival: m.arrivalCount || "",
-          min: m.priceMin,
-          max: m.priceMax,
-          trend: (m.trend || "stable") as "up" | "down" | "stable",
-          trendPct: m.trendPct || 0,
-          mandiName: m.station,
-          mandiCity: m.station,
-          province: m.province,
-          vertical: m.vertical,
-        },
-      };
-    }
-    return { row: noData, hasData: false };
-  };
-
-  const buildAllRows = (bp: string): RichRow[] => {
-    const rows: RichRow[] = [];
-    const seen = new Set<string>(); // deduplicate by mandi+rateType
-    for (let i = 0; i < activeProductRows.length; i++) {
-      const r = activeProductRows[i];
-      if (!inLocScope(r.mandiName, r.mandiCity, r.province)) continue;
-      if (bp && !isMatchByproduct(r.byproduct, bp)) continue;
-      if (selectedRateTypes.length > 0 && !selectedRateTypes.includes(r.rateType)) continue;
-
-      const key = `${r.mandiName}|${r.rateType}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
-      rows.push(r);
-    }
-
-    if (isAllPakistan) {
-      const byProv: Record<string, RichRow[]> = {};
-      rows.forEach((r) => {
-        const p = r.province || "Punjab";
-        if (!byProv[p]) byProv[p] = [];
-        byProv[p].push(r);
-      });
-      const provOrder = ["Punjab", "Sindh", "KPK", "Balochistan"];
-      const interleaved: RichRow[] = [];
-      let round = 0;
-      let added = true;
-      while (added) {
-        added = false;
-        for (const p of provOrder) {
-          if (byProv[p] && byProv[p][round]) {
-            interleaved.push(byProv[p][round]);
-            added = true;
-          }
-        }
-        round++;
-      }
-      return interleaved.length > 0 ? interleaved : rows;
-    }
-
-    return rows;
-  };
-
-  const handlePriceChipTap = (rateType: string) => {
-    const isCurrentlyOn = selectedRateTypes.includes(rateType);
-    setSelectedRateTypes((p) =>
-      p.includes(rateType) ? p.filter((x) => x !== rateType) : [...p, rateType],
-    );
-    if (voiceEnabled) {
-      if (lang === "ur") {
-        speakText(
-          isCurrentlyOn
-            ? "تمام ریٹس دکھائے جا رہے ہیں۔"
-            : `تمام ${trL(rateType)} کے ریٹس دکھائے جا رہے ہیں۔`,
-        );
-      } else {
-        speakText(
-          isCurrentlyOn
-            ? "All price types are shown."
-            : `All ${rateType} rates are shown.`,
-        );
-      }
-    }
-  };
-
-  const handleMandiChipTap = (mandiName: string) => {
-    if (voiceEnabled) {
-      speakText(
-        lang === "ur"
-          ? `${tmL(mandiName)} کی قیمتیں دکھائی جا رہی ہیں۔`
-          : `Prices of ${mandiName} are shown.`,
-      );
-    }
-  };
 
   const locLabel =
     selectedLocs.length === 0
-      ? (locationScope && locationScope.kind !== "pakistan"
+      ? locationScope && locationScope.kind !== 'pakistan'
         ? tmL(locationScope.label)
-        : (lang === "ur" ? "پاکستان" : "Pakistan"))
+        : lang === 'ur'
+        ? 'پاکستان'
+        : 'Pakistan'
       : selectedLocs.length === 1
-        ? tmL(selectedLocs[0].label)
-        : lang === "ur"
-          ? `${selectedLocs.length} مقامات`
-          : `${selectedLocs.length} Locations`;
+      ? tmL(selectedLocs[0].label)
+      : lang === 'ur'
+      ? `${selectedLocs.length} مقامات`
+      : `${selectedLocs.length} Locations`;
+
+  // Compute 1 summary card per by-product with 100% REAL calculated data
+  const byproductCardsData = useMemo(() => {
+    return byproducts.map((bp) => {
+      const stats = calculateByproductSummary(
+        activeProduct?.product || '',
+        bp,
+        currentLocScope
+      );
+      return {
+        bp,
+        stats,
+      };
+    });
+  }, [byproducts, activeProduct?.product, currentLocScope]);
 
   return (
     <div
       className="flex flex-col h-full screen-enter relative overflow-hidden"
-      style={{ background: "#F5F8F6" }}
+      style={{ background: '#F1F7F4' }}
     >
-      {/* Province Screen Background */}
-      {screenBg && (
-        <div
-          className="absolute inset-0 pointer-events-none transition-all duration-500 ease-out"
-          style={{
-            zIndex: 0,
-            backgroundImage: `url(${screenBg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-            backgroundRepeat: "no-repeat",
-            opacity: 0.85,
-          }}
-        />
-      )}
-
-      {/*  Header  */}
+      {/* Header */}
       <header
         className="flex-shrink-0 relative z-10"
         style={{
-          background: "rgba(244, 250, 247, 0.86)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(213, 226, 221, 0.8)",
+          background: 'rgba(244, 250, 247, 0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(213, 226, 221, 0.8)',
         }}
       >
-        {/* Title row with Wheat emoji, Full product name, Date capsule, and Location */}
-        <div className="px-2.5 pt-9 pb-2 flex items-center justify-between gap-1 w-full overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-          {/* Left: Back button + Wheat product emoji + Completely visible Product Name */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Title row */}
+        <div className="px-3 pt-9 pb-2.5 flex items-center justify-between gap-2 w-full">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <button
               onClick={onBack}
               className="tap-target zm-beam-border w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 text-[#183B34] transition active:scale-95"
               style={{
-                background: "rgba(255, 255, 255, 0.65)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1.2px solid rgba(16, 185, 129, 0.45)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                background: 'rgba(255, 255, 255, 0.7)',
+                border: '1.2px solid rgba(16, 185, 129, 0.4)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               }}
             >
-              {lang === "ur" ? "→" : "←"}
+              {lang === 'ur' ? '→' : '←'}
             </button>
             <ProductIcon
-              name={activeProduct?.product || "Wheat"}
-              vertical={activeProduct?.vertical || "Grains"}
-              size={26}
-              className="flex-shrink-0"
+              name={activeProduct?.product || 'Wheat'}
+              vertical={activeProduct?.vertical}
+              size={32}
+              style={{ flexShrink: 0 }}
             />
-            <h1
-              className="font-extrabold text-[15px] text-[#111827] whitespace-nowrap flex-shrink-0"
-              style={{
-                fontFamily:
-                  lang === "ur"
-                    ? URDU_FONT
-                    : "'Poppins', sans-serif",
-              }}
-            >
-              {activeProduct
-                ? tcL(activeProduct.product)
-                : lang === "ur"
-                  ? "گندم"
-                  : "Wheat"}
-            </h1>
-          </div>
-
-          {/* Right: Combined Date Capsule (Gregorian + Lunar in 1 pill) + Location selector */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* Combined Date Capsule (2 Columns: Gregorian & Islamic) */}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                if (voiceEnabled) {
-                  speakText(
-                    lang === "ur"
-                      ? `تاریخ: ${visibleDateLabel.d} ${visibleDateLabel.month.toUpperCase() === "AUG" ? "اگست" : visibleDateLabel.month}، قمری تاریخ: ${islamicDate.fullText}`
-                      : `Date: ${visibleDateLabel.month} ${visibleDateLabel.d}, Lunar Date: ${islamicDate.fullText}`,
-                  );
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[#075E4F] flex-shrink-0 cursor-pointer active:scale-95 transition select-none zm-beam-border"
-              style={{
-                minHeight: "34px",
-                background: "rgba(255, 255, 255, 0.65)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1.2px solid rgba(16, 185, 129, 0.45)",
-                boxShadow: "0 2px 10px rgba(16, 185, 129, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
-              }}
-              title={lang === "ur" ? "شمسی و قمری تاریخ" : "Gregorian & Lunar Date"}
-            >
-              {/* Left Column: Gregorian Month over Day */}
-              <div className="flex flex-col items-center justify-center leading-none">
-                <span
-                  className="text-[10px] font-black text-[#075E4F] whitespace-nowrap"
-                  style={{
-                    fontFamily:
-                      lang === "ur"
-                        ? URDU_FONT
-                        : "inherit",
-                  }}
-                >
-                  {lang === "ur"
-                    ? (visibleDateLabel.month.toUpperCase() === "AUG" ? "اگست" : visibleDateLabel.month)
-                    : (visibleDateLabel.month === "AUG" ? "Aug" : visibleDateLabel.month)}
-                </span>
-                <span className="text-[10px] font-black text-[#075E4F] whitespace-nowrap mt-1">
-                  {lang === "ur" ? toUrduDigits(visibleDateLabel.d) : visibleDateLabel.d}
-                </span>
-              </div>
-
-              {/* Hyphen Separator */}
-              <span className="text-[#087F63] font-bold text-xs leading-none opacity-50 px-0.5">-</span>
-
-              {/* Right Column: Islamic Date over Hijri Year (Centered) */}
-              <div
-                className="flex flex-col items-center justify-center leading-none text-center"
+            <div className="min-w-0">
+              <h2
+                className="font-black text-[#183B34] text-base leading-tight truncate"
+                style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
               >
-                <span
-                  className="text-[10.5px] font-extrabold text-[#087F63] whitespace-nowrap text-center"
-                  style={{
-                    fontFamily:
-                      lang === "ur"
-                        ? URDU_FONT
-                        : "inherit",
-                  }}
-                >
-                  {lang === "ur"
-                    ? `${toUrduDigits(String(islamicDate.day).padStart(2, "0"))} ${islamicDate.monthName ? islamicDate.monthName : "ربیع الاول"}`
-                    : `${String(islamicDate.day).padStart(2, "0")} ${islamicDate.monthName && islamicDate.monthName !== "ربیع الاول" ? islamicDate.monthName : "Rabi ul Awwal"}`}
-                </span>
-                <span
-                  className="text-[9.5px] font-bold text-[#087F63] whitespace-nowrap mt-1 text-center"
-                  style={{
-                    fontFamily:
-                      lang === "ur"
-                        ? URDU_FONT
-                        : "inherit",
-                  }}
-                >
-                  {lang === "ur" ? `${toUrduDigits(String(islamicDate.year || 1448))}ھ` : `${islamicDate.year || 1448} AH`}
-                </span>
-              </div>
+                {tcL(activeProduct?.product || 'Wheat')}
+              </h2>
+              <p className="text-[11px] font-semibold text-[#52635F] leading-tight">
+                {lang === 'ur'
+                  ? `${toUrduDigits(byproducts.length)} ضمنی مصنوعات`
+                  : `${byproducts.length} By-products`}
+              </p>
             </div>
-
-            {/* Location selector button */}
-            <button
-              onClick={() => {
-                setLocSheet(true);
-                if (voiceEnabled) {
-                  speakText(
-                    lang === "ur" ? "مقام منتخب کریں" : "Select location",
-                  );
-                }
-              }}
-              className="tap-target zm-beam-border flex-shrink-0 flex items-center gap-1 rounded-full font-bold text-xs px-2.5 py-1 text-[#075E4F] cursor-pointer active:scale-95 transition"
-              style={{
-                minHeight: "34px",
-                background: "rgba(255, 255, 255, 0.65)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1.2px solid rgba(16, 185, 129, 0.45)",
-                boxShadow: "0 2px 10px rgba(16, 185, 129, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
-              }}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="#075E4F" className="text-[#075E4F] flex-shrink-0">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                <circle cx="12" cy="9" r="2.5" fill="#EAF5F0" />
-              </svg>
-              <span className="text-[10.5px] whitespace-nowrap font-bold text-[#075E4F]">
-                {locLabel}
-              </span>
-              <svg
-                width="8"
-                height="8"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="opacity-75 flex-shrink-0 text-[#075E4F]"
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
           </div>
-        </div>
 
-        {/* Streamlined Minimal By-Products Filter Bar (Transparent Glassmorphic) */}
-        <div
-          className="px-3 py-2 flex items-center gap-2 flex-shrink-0 relative"
-          style={{
-            background: "rgba(244, 250, 247, 0.45)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            borderTop: "1px solid rgba(255, 255, 255, 0.6)",
-            borderBottom: "1px solid rgba(16, 185, 129, 0.15)",
-          }}
-        >
-          {/* By-Products horizontal scroll pill selector */}
-          <div
-            className="flex items-center gap-1.5 overflow-x-auto w-full py-0.5"
-            style={{ scrollbarWidth: "none" }}
+          {/* Location selector pill button */}
+          <button
+            onClick={() => setLocSheet(true)}
+            className="tap-target zm-beam-border flex-shrink-0 flex items-center gap-1.5 rounded-full font-bold text-xs px-3 py-1.5 text-[#075E4F] cursor-pointer active:scale-95 transition"
+            style={{
+              background: 'rgba(255, 255, 255, 0.75)',
+              backdropFilter: 'blur(12px)',
+              border: '1.2px solid rgba(16, 185, 129, 0.45)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.12)',
+            }}
           >
-            <button
-              onClick={() => {
-                setSelectedBP(null);
-                if (voiceEnabled)
-                  speakText(
-                    lang === "ur"
-                      ? "تمام ضمنی مصنوعات"
-                      : "All byproducts",
-                  );
-              }}
-              className="tap-target zm-beam-border flex-shrink-0 rounded-full font-bold flex items-center justify-center transition active:scale-95"
-              style={{
-                background: !selectedBP
-                  ? "linear-gradient(135deg, rgba(167, 243, 208, 0.75), rgba(110, 231, 183, 0.6))"
-                  : "rgba(255, 255, 255, 0.55)",
-                color: "#064E3B",
-                border: !selectedBP
-                  ? "1.2px solid #10B981"
-                  : "1.2px solid rgba(16, 185, 129, 0.4)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                boxShadow: !selectedBP
-                  ? "0 4px 14px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.7)"
-                  : "0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7)",
-                fontSize: lang === "ur" ? 15 : 12,
-                padding: lang === "ur" ? "4px 14px" : "4px 12px",
-                minHeight: 34,
-                fontFamily:
-                  lang === "ur"
-                    ? URDU_FONT
-                    : "inherit",
-              }}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="#075E4F"
+              className="text-[#075E4F] flex-shrink-0"
             >
-              {lang === "ur" ? "تمام ضمنی" : "All ByP"}
-            </button>
-            {byproducts.map((bp) => {
-              const on = selectedBP === bp;
-              return (
-                <button
-                  key={bp}
-                  onClick={() => {
-                    setSelectedBP(on ? null : bp);
-                    if (voiceEnabled)
-                      speakText(
-                        on
-                          ? lang === "ur"
-                            ? "تمام ضمنی مصنوعات"
-                            : "All byproducts"
-                          : tcL(bp),
-                      );
-                  }}
-                  className="tap-target zm-beam-border flex-shrink-0 flex items-center gap-1.5 rounded-full font-bold transition active:scale-95"
-                  style={{
-                    background: on
-                      ? "linear-gradient(135deg, rgba(167, 243, 208, 0.75), rgba(110, 231, 183, 0.6))"
-                      : "rgba(255, 255, 255, 0.55)",
-                    color: "#064E3B",
-                    border: on
-                      ? "1.2px solid #10B981"
-                      : "1.2px solid rgba(16, 185, 129, 0.4)",
-                    backdropFilter: "blur(12px)",
-                    WebkitBackdropFilter: "blur(12px)",
-                    boxShadow: on
-                      ? "0 4px 14px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.7)"
-                      : "0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7)",
-                    fontSize: lang === "ur" ? 15 : 12,
-                    padding: lang === "ur" ? "4px 14px" : "4px 12px",
-                    minHeight: 34,
-                    fontFamily:
-                      lang === "ur"
-                        ? URDU_FONT
-                        : "inherit",
-                  }}
-                >
-                  <ProductIcon
-                    name={bp}
-                    vertical={activeProduct?.vertical}
-                    size={lang === "ur" ? 17 : 14}
-                    style={{ flexShrink: 0 }}
-                  />
-                  <span>{tcL(bp)}</span>
-                </button>
-              );
-            })}
-          </div>
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+              <circle cx="12" cy="9" r="2.5" fill="#EAF5F0" />
+            </svg>
+            <span className="text-[11px] whitespace-nowrap font-bold text-[#075E4F]">
+              {locLabel}
+            </span>
+            <svg
+              width="8"
+              height="8"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="opacity-75 flex-shrink-0 text-[#075E4F]"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
         </div>
-      </header>
 
-      {/*  By-Product Rate Cards — date grouped  */}
-      <div
-        ref={scrollAreaRef}
-        className="flex-1 overflow-y-auto pb-6"
-        style={{ scrollbarWidth: "none" }}
-      >
-        {activeBPs.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 opacity-50 px-4">
-            <span style={{ fontSize: 48 }}></span>
-            <p className="font-semibold mt-2">No by-products found</p>
+        {/* Vertical Level Entry Filter Bar: ONLY rendered if entry is multi-product! */}
+        {isVerticalLevelEntry && (
+          <div
+            className="px-3 py-2 flex items-center gap-2 flex-shrink-0 relative overflow-x-auto"
+            style={{
+              background: 'rgba(244, 250, 247, 0.55)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.6)',
+              borderBottom: '1px solid rgba(16, 185, 129, 0.15)',
+              scrollbarWidth: 'none',
+            }}
+          >
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full py-0.5">
+              {products.map((p, pIdx) => {
+                const on = pIdx === idx;
+                return (
+                  <button
+                    key={p.product}
+                    onClick={() => setActive(pIdx)}
+                    className="tap-target zm-beam-border flex-shrink-0 flex items-center gap-1.5 rounded-full font-bold transition active:scale-95 px-3 py-1"
+                    style={{
+                      background: on
+                        ? 'linear-gradient(135deg, rgba(167, 243, 208, 0.85), rgba(110, 231, 183, 0.75))'
+                        : 'rgba(255, 255, 255, 0.65)',
+                      color: '#064E3B',
+                      border: on
+                        ? '1.2px solid #10B981'
+                        : '1.2px solid rgba(16, 185, 129, 0.35)',
+                      fontSize: 12,
+                      minHeight: 32,
+                    }}
+                  >
+                    <ProductIcon
+                      name={p.product}
+                      vertical={p.vertical}
+                      size={16}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <span>{tcL(p.product)}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
-        {activeBPs.length > 0 &&
-          Array.from({ length: NUM_DAYS }, (_, offset) => {
-            const dateObj = dateForOffset(offset);
-            const dKey = dateLabelStr(dateObj);
-            const dDisplay = dateDisplayStr(dateObj);
-            const isToday = offset === 0;
-            const priceVariation = 1 - offset * 0.012;
-            const secIslamic = getIslamicDate(dateObj, lang);
-            const dayOfWeek = dateObj.getDay();
-            const weekday = lang === "ur" ? weekdaysUr[dayOfWeek] : weekdaysEn[dayOfWeek];
+      </header>
 
-            const sortedBPs = [...activeBPs].sort((a, b) => {
-              const aHas = buildRepRow(a).hasData;
-              const bHas = buildRepRow(b).hasData;
-              if (aHas && !bHas) return -1;
-              if (!aHas && bHas) return 1;
-              return 0;
-            });
-
-            // Progressive filter-based reveal calculation
-            const isCountryFilter =
-              selectedLocs.length === 0 ||
-              selectedLocs.some((l) => l.kind === "pakistan");
-            const isProvinceFilter = selectedLocs.some(
-              (l) => l.kind === "province",
-            );
-            const isDistrictFilter = selectedLocs.some(
-              (l) => l.kind === "district",
-            );
-
-            const revealRatio = isCountryFilter
-              ? 0.45 // Whole country: ~45% cards visible
-              : isProvinceFilter
-                ? 0.35 // Province: ~35% cards visible
-                : isDistrictFilter
-                  ? 0.25 // District: ~25% cards visible
-                  : 0.15; // Specific Mandi: ~15% cards visible
-
-            // Flatten all rows for this date to track cardIndex
-            let totalCardCountInDate = 0;
-            const allDateItems: {
-              bp: string;
-              r: RichRow;
-              hasData: boolean;
-            }[] = [];
-
-            sortedBPs.forEach((bp, bpIndex) => {
-              const allR = buildAllRows(bp);
-              const { row: repRow, hasData } = buildRepRow(bp, bpIndex);
-              const dataRows = selectedBP
-                ? (isAllPakistan ? allR.slice(0, 4) : allR)
-                : [repRow];
-              const showRows =
-                hasData || (selectedBP && allR.length > 0)
-                  ? dataRows.map((r) => ({
-                    r: {
-                      ...r,
-                      min: Math.round(r.min * priceVariation),
-                      max: Math.round(r.max * priceVariation),
-                    },
-                    hasData: true,
-                  }))
-                  : [
-                    {
-                      r: {
-                        ...repRow,
-                        byproduct: bp,
-                        min: Math.round(repRow.min * priceVariation),
-                        max: Math.round(repRow.max * priceVariation),
-                      },
-                      hasData: false,
-                    },
-                  ];
-
-              showRows.forEach((item) => {
-                allDateItems.push({ bp, ...item });
-              });
-            });
-
-            totalCardCountInDate = allDateItems.length;
-            const visibleThreshold = Math.max(
-              1,
-              Math.ceil(totalCardCountInDate * revealRatio),
-            );
-
+      {/* By-Product Cards — 1 card for each by-product */}
+      <div
+        className="flex-1 overflow-y-auto px-3.5 pt-3 pb-6"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {byproductCardsData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 opacity-50 px-4">
+            <p className="font-semibold text-sm">
+              {lang === 'ur'
+                ? 'کوئی ضمنی مصنوعات نہیں ملیں'
+                : 'No by-products found'}
+            </p>
+          </div>
+        ) : (
+          byproductCardsData.map(({ bp, stats }) => {
             return (
-              <div
-                key={dKey}
-                ref={(el) => {
-                  if (el) dateSectionRefs.current.set(dKey, el);
-                  else dateSectionRefs.current.delete(dKey);
+              <ByProductNationalCard
+                key={`${activeProduct?.product}-${bp}`}
+                stats={stats}
+                vertical={activeProduct?.vertical}
+                onClick={() => {
+                  push({
+                    id: 'product-rates',
+                    vertical: activeProduct?.vertical || 'Grains',
+                    product: activeProduct?.product || 'Wheat',
+                    byproduct: bp,
+                    initialRateType: stats.mostOccurringRateType,
+                    initialNewOld: stats.dominantNewOld || undefined,
+                  });
                 }}
-              >
-                {/* Date section separator */}
-                <div
-                  className="px-4 pt-4 pb-2 flex items-center gap-3"
-                  style={{
-                    position: "sticky",
-                    top: 0,
-                    zIndex: 10,
-                    background: "transparent",
-                  }}
-                >
-                  <div
-                    className="flex-1 h-px"
-                    style={{ background: "#D5E2DD" }}
-                  />
-                  <span
-                    className="font-extrabold text-xs px-4 py-1.5 rounded-full flex-shrink-0 flex items-center gap-1.5 text-white shadow-sm"
-                    style={{
-                      background: isToday
-                        ? "linear-gradient(135deg, rgba(6, 78, 65, 0.95), rgba(8, 127, 99, 0.9))"
-                        : "linear-gradient(135deg, rgba(8, 127, 99, 0.92), rgba(16, 185, 129, 0.85))",
-                      border: "1px solid rgba(255, 255, 255, 0.4)",
-                      backdropFilter: "blur(10px)",
-                      WebkitBackdropFilter: "blur(10px)",
-                      boxShadow: "0 4px 14px rgba(8, 127, 99, 0.22)",
-                    }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                    <span
-                      style={{
-                        fontFamily: lang === "ur" ? URDU_FONT : "inherit",
-                      }}
-                    >
-                      {lang === "ur"
-                        ? `${weekday}، ${dDisplay} • ${toUrduDigits(String(secIslamic.day).padStart(2, "0"))} ${secIslamic.monthName} ${toUrduDigits(String(secIslamic.year || 1448))}ھ`
-                        : `${weekday}, ${dDisplay} • ${String(secIslamic.day).padStart(2, "0")} ${secIslamic.monthName} ${secIslamic.year || 1448} AH`}
-                    </span>
-                  </span>
-                  <div
-                    className="flex-1 h-px"
-                    style={{ background: "#D5E2DD" }}
-                  />
-                </div>
-
-                {/* Historical Date Locked Notice for Non-Subscribers */}
-                {!isToday && !profileCompleted && (
-                  <div
-                    className="mx-4 my-2 px-3 py-2.5 rounded-2xl flex items-center justify-between gap-2"
-                    style={{
-                      background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)",
-                      border: "1.2px solid #F59E0B",
-                      boxShadow: "0 2px 8px rgba(245, 158, 11, 0.1)",
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontSize: 16 }}>🔒</span>
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 11.5,
-                            fontWeight: 800,
-                            color: "#92400E",
-                          }}
-                        >
-                          {lang === "ur"
-                            ? `${dDisplay} کے ریٹس لاک ہیں`
-                            : `Rates for ${dDisplay} are locked`}
-                        </div>
-                        <div style={{ fontSize: 10, color: "#B45309" }}>
-                          {lang === "ur"
-                            ? "پچھلی تاریخوں کا ریکارڈ دیکھنے کے لیے پروفائل مکمل کریں۔"
-                            : "Complete your profile to unlock historical price data."}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onOpenSubscribe?.()}
-                      className="tap-target px-2.5 py-1.5 rounded-xl font-extrabold text-xs text-white flex-shrink-0"
-                      style={{
-                        background: "#087F63",
-                        boxShadow: "0 2px 6px rgba(8,127,99,0.25)",
-                      }}
-                    >
-                      {lang === "ur" ? "انلاک ➔" : "Unlock ➔"}
-                    </button>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3 px-3 pb-2">
-                  {allDateItems.map(({ bp, r, hasData: hd }, cardIdx) => {
-                    // Determine if card is blurred
-                    const isCardBlurred =
-                      !profileCompleted &&
-                      (!isToday || cardIdx >= visibleThreshold);
-
-                    return (
-                      <div
-                        key={`${dKey}-${bp}-${cardIdx}`}
-                        className="relative"
-                        style={{ overflow: "hidden", borderRadius: 18 }}
-                      >
-                        {/* If no data */}
-                        {!hd && !isCardBlurred && (
-                          <div className="absolute inset-0 z-20 rounded-2xl flex flex-col items-center justify-center pointer-events-none overflow-hidden">
-                            <div
-                              className="absolute inset-0"
-                              style={{
-                                background: "rgba(255,255,255,0.72)",
-                                borderRadius: "inherit",
-                              }}
-                            />
-                            <div
-                              className="relative z-10 flex flex-col items-center gap-1 px-4 py-2 rounded-xl"
-                              style={{
-                                background: "rgba(243,244,246,0.95)",
-                                border: "1px solid #D5E2DD",
-                              }}
-                            >
-                              <span
-                                className="font-bold text-xs"
-                                style={{ color: "#52635F" }}
-                              >
-                                No data for {isToday ? "today" : dDisplay}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Card Content (blurred if locked) */}
-                        <div
-                          style={{
-                            filter: isCardBlurred ? "blur(5px)" : "none",
-                            opacity: isCardBlurred ? 0.6 : 1,
-                            pointerEvents: isCardBlurred ? "none" : "auto",
-                            userSelect: isCardBlurred ? "none" : "auto",
-                            transition: "filter 0.3s, opacity 0.3s",
-                          }}
-                        >
-                          {(() => {
-                            const cardVertical =
-                              r.vertical ||
-                              activeProduct?.vertical ||
-                              "Grains";
-                            const cardProduct =
-                              r.product || activeProduct?.product || bp;
-                            const cardBaseItem: RateItem = {
-                              vertical: cardVertical,
-                              product: cardProduct,
-                              byproduct: bp,
-                              mandiName: r.mandiName,
-                              rateType: r.rateType,
-                            };
-                            return (
-                              <RateCard
-                                r={{ ...r, byproduct: bp }}
-                                provinceBg={
-                                  isAllPakistan
-                                    ? (PROVINCE_CARD_BG[r.province] || undefined)
-                                    : undefined
-                                }
-                                dateText={isToday ? "TODAY" : dDisplay}
-                                isToday={isToday}
-                                isFavorite={isPickedBP(cardBaseItem)}
-                                onToggleFavorite={() =>
-                                  togglePickBP(cardBaseItem)
-                                }
-                                onClick={() =>
-                                  handleCardTap(r, bp, () => {
-                                    const rowVertical =
-                                      r.vertical ||
-                                      activeProduct?.vertical ||
-                                      "Grains";
-                                    const rowproduct =
-                                      r.product || activeProduct?.product || bp;
-                                    const baseItem = {
-                                      vertical: rowVertical,
-                                      product: rowproduct,
-                                      byproduct: bp,
-                                    };
-                                    if (!hd) {
-                                      push({ id: "product-rates", ...baseItem });
-                                      return;
-                                    }
-                                    push({
-                                      id: "product-rates",
-                                      ...baseItem,
-                                      initialRateType: r.rateType,
-                                      initialMandi: r.mandiName,
-                                      initialVariety: r.variety || undefined,
-                                      initialNewOld: r.newOld || undefined,
-                                      initialColor: r.color || undefined,
-                                      initialSpec: r.spec || undefined,
-                                      initialCondition: r.condition || undefined,
-                                      initialStatDate:
-                                        offset > 0
-                                          ? dateObj.toISOString()
-                                          : undefined,
-                                    });
-                                  })
-                                }
-                                onPriceChipTap={hd ? handlePriceChipTap : undefined}
-                                onMandiChipTap={hd ? handleMandiChipTap : undefined}
-                              />
-                            );
-                          })()}
-                        </div>
-
-                        {/* Blurred Locked Card Overlay */}
-                        {isCardBlurred && (
-                          <div
-                            onClick={() => onOpenSubscribe?.()}
-                            className="tap-target absolute inset-0 z-20 flex flex-col items-center justify-center p-3 cursor-pointer"
-                            style={{
-                              background: "rgba(244, 250, 247, 0.72)",
-                              backdropFilter: "blur(2px)",
-                              borderRadius: 18,
-                            }}
-                          >
-                            <div
-                              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full"
-                              style={{
-                                background: "#FFFFFF",
-                                border: "1.5px solid #087F63",
-                                boxShadow: "0 4px 14px rgba(8,127,99,0.18)",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  color: "#087F63",
-                                }}
-                              >
-                                {lang === "ur"
-                                  ? "ریٹ دیکھنے کے لیے پروفائل مکمل کریں"
-                                  : "Complete Profile to Unlock Rate"}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 900,
-                                  color: "#087F63",
-                                }}
-                              >
-                                ➔
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                onMorePriceTypesClick={() => {
+                  push({
+                    id: 'product-rates',
+                    vertical: activeProduct?.vertical || 'Grains',
+                    product: activeProduct?.product || 'Wheat',
+                    byproduct: bp,
+                    initialRateType: stats.mostOccurringRateType,
+                    initialNewOld: stats.dominantNewOld || undefined,
+                  });
+                }}
+              />
             );
-          })}
+          })
+        )}
       </div>
 
       {locSheet && (
@@ -7073,30 +6708,13 @@ function ByProductCombinedScreen({
             if (locs.length === 1 && onSelectLocation) {
               onSelectLocation(locs[0]);
             } else if (locs.length === 0 && onSelectLocation) {
-              onSelectLocation({ kind: "pakistan", label: "All Pakistan" });
+              onSelectLocation({ kind: 'pakistan', label: 'All Pakistan' });
             }
             setLocSheet(false);
-            if (voiceEnabled) {
-              if (locs.length === 0 || locs.some((l) => l.kind === "pakistan")) {
-                speakText("Prices of my country shown.");
-              } else if (locs.length === 1) {
-                const loc = locs[0];
-                if (loc.kind === "pakistan")
-                  speakText("Prices of my country shown.");
-                else if (loc.kind === "province")
-                  speakText(`Prices of ${loc.label} are shown.`);
-                else if (loc.kind === "district")
-                  speakText(`Prices of ${loc.label} district are shown.`);
-                else speakText(`Prices of ${loc.label} are shown.`);
-              } else {
-                speakText(`Prices of ${locs.length} locations are shown.`);
-              }
-            }
           }}
           onClose={() => setLocSheet(false)}
         />
       )}
-
     </div>
   );
 }
@@ -9735,156 +9353,143 @@ type CompRow = {
   trendPct: number;
 };
 
-// Helper to generate realistic curve and axis data for Mandi Graph Popup modal
-function getMandiModalGraphData(
-  minVal: number,
-  maxVal: number,
-  trend: "up" | "down" | "flat" | "stable",
-  timeframe: "24h" | "72h" | "7d" | "30d",
-  lang: string,
-) {
-  const diff = Math.max(maxVal - minVal, 50);
-  let pattern: number[];
-  if (trend === "up") {
-    // Upward curve matching the user screenshot:
-    // Starts low around min, dips slightly or stabilizes, then climbs steadily to near max
-    pattern = [0.08, 0.35, 0.28, 0.45, 0.72, 0.74, 0.95];
-  } else if (trend === "down") {
-    // Downward curve
-    pattern = [0.92, 0.78, 0.70, 0.55, 0.32, 0.30, 0.08];
-  } else {
-    // Flat / stable
-    pattern = [0.45, 0.55, 0.42, 0.58, 0.48, 0.52, 0.50];
-  }
+// Helper to generate 100% real Excel-derived curve, arrival, and axis data for Mandi Graph inline drawer
+function getRealMandiInlineGraphData(options: {
+  product: string;
+  byproduct?: string;
+  mandiName: string;
+  rateType: string;
+  timeframe: "24h" | "72h" | "7d" | "30d";
+  lang: string;
+  view: "price" | "arrival";
+}) {
+  const { product, byproduct, mandiName, rateType, timeframe, lang, view } = options;
 
-  const tfShift =
-    timeframe === "24h"
-      ? [0, 0, 0, 0, 0, 0, 0]
-      : timeframe === "72h"
-        ? [-0.02, 0.03, -0.01, 0.04, -0.01, 0.02, 0]
-        : timeframe === "7d"
-          ? [0.03, -0.02, 0.04, -0.02, 0.03, -0.01, 0]
-          : [-0.04, 0.02, -0.03, 0.05, -0.02, 0.03, 0];
-
-  const points = pattern.map((p, i) => {
-    const val = minVal + diff * Math.max(0.02, Math.min(0.98, p + tfShift[i]));
-    return Math.round(val);
+  const timeline = getExcelTimeline({
+    product,
+    byproduct,
+    locationLabel: mandiName,
+    locationKind: "mandi",
+    rateType,
+    range: "year",
   });
 
-  if (trend === "up") {
-    points[0] = Math.round(minVal + diff * 0.08);
-    points[6] = Math.round(maxVal - diff * 0.04);
-  } else if (trend === "down") {
-    points[0] = Math.round(maxVal - diff * 0.06);
-    points[6] = Math.round(minVal + diff * 0.08);
-  }
+  const sliceCount =
+    timeframe === "24h" ? 2 :
+    timeframe === "72h" ? 4 :
+    timeframe === "7d" ? 7 :
+    31;
 
-  let xLabels: string[] = [];
-  if (timeframe === "24h") {
-    xLabels = ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "Now"];
-  } else if (timeframe === "72h") {
-    xLabels =
-      lang === "ur"
-        ? ["دن 1", "12:00", "دن 2", "12:00", "دن 3", "12:00", "اب"]
-        : ["Day 1", "12:00", "Day 2", "12:00", "Day 3", "12:00", "Now"];
-  } else if (timeframe === "7d") {
-    xLabels =
-      lang === "ur"
-        ? ["پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ", "اتوار"]
-        : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  } else {
-    xLabels =
-      lang === "ur"
-        ? ["یکم", "5ویں", "10ویں", "15ویں", "20ویں", "25ویں", "آج"]
-        : ["1st", "5th", "10th", "15th", "20th", "25th", "Today"];
-  }
+  const rawDates = timeline.dates.slice(-sliceCount);
+  const rawPrices = timeline.prices.slice(-sliceCount);
+  const rawMins = timeline.mins.slice(-sliceCount);
+  const rawMaxs = timeline.maxs.slice(-sliceCount);
+  const rawArrivals = timeline.arrivals.slice(-sliceCount);
 
-  const yMinBound = minVal - diff * 0.12;
-  const yMaxBound = maxVal + diff * 0.12;
-  const yMidVal = (minVal + maxVal) / 2;
+  const urDays = ["اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ"];
+  const enDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const urMonths = [
+    "جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون",
+    "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"
+  ];
+  const enMonths = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const xLabels = rawDates.map((dateStr, i) => {
+    const parts = dateStr.split("-");
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dt = new Date(y, m, d);
+    const dayName = lang === "ur" ? urDays[dt.getDay()] : enDays[dt.getDay()];
+    const mName = lang === "ur" ? urMonths[m] : enMonths[m];
+    const dayNumStr = lang === "ur" ? toUrduDigits(d) : String(d);
+
+    if (timeframe === "24h" || timeframe === "72h") {
+      return lang === "ur" ? `${dayName} ${dayNumStr}` : `${dayName} ${d}`;
+    } else if (timeframe === "7d") {
+      return lang === "ur" ? `${dayName}` : `${dayName}`;
+    } else {
+      if (i % 6 === 0 || i === rawDates.length - 1) {
+        return lang === "ur" ? `${dayNumStr} ${mName}` : `${d} ${mName}`;
+      }
+      return "";
+    }
+  });
 
   const fmtK = (v: number) =>
     v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(Math.round(v));
 
-  const yLabels = [
-    { label: fmtK(yMaxBound), val: yMaxBound },
-    { label: fmtK(yMidVal), val: yMidVal },
-    { label: fmtK(yMinBound), val: yMinBound },
-  ];
+  if (view === "price") {
+    const points = rawPrices;
+    const validMins = rawMins.filter((v) => v > 0);
+    const validMaxs = rawMaxs.filter((v) => v > 0);
+    const minVal = validMins.length > 0 ? Math.min(...validMins) : Math.min(...points);
+    const maxVal = validMaxs.length > 0 ? Math.max(...validMaxs) : Math.max(...points);
+    const diff = Math.max(maxVal - minVal, 50);
 
-  return { points, xLabels, yLabels, yMinBound, yMaxBound };
-}
+    const yMinBound = Math.max(0, Math.round(minVal - diff * 0.1));
+    const yMaxBound = Math.round(maxVal + diff * 0.1);
+    const yMidVal = Math.round((yMinBound + yMaxBound) / 2);
 
-// Helper to generate realistic arrival volume curve and axis data for Mandi Graph Popup modal
-function getMandiArrivalModalGraphData(
-  arrivalCountStr: string | number | undefined,
-  timeframe: "24h" | "72h" | "7d" | "30d",
-  lang: string,
-) {
-  const baseArrival = (() => {
-    if (typeof arrivalCountStr === "number") return arrivalCountStr;
-    if (!arrivalCountStr) return 8400;
-    const match = String(arrivalCountStr).trim().match(/^([0-9,]+)/);
-    return match ? parseInt(match[1].replace(/,/g, ""), 10) || 8400 : 8400;
-  })();
+    const yLabels = [
+      { label: fmtK(yMaxBound), val: yMaxBound },
+      { label: fmtK(yMidVal), val: yMidVal },
+      { label: fmtK(yMinBound), val: yMinBound },
+    ];
 
-  const minVal = Math.round(baseArrival * 0.55);
-  const maxVal = Math.round(baseArrival * 1.35);
-  const diff = Math.max(maxVal - minVal, 500);
+    const latestPrice = points[points.length - 1] ?? 0;
+    const prevPrice = points.length >= 2 ? points[0] : latestPrice;
+    let trend: "up" | "down" | "stable" = "stable";
+    let trendPct = 0;
+    if (prevPrice > 0 && latestPrice > 0) {
+      const delta = latestPrice - prevPrice;
+      trendPct = Math.round((Math.abs(delta) / prevPrice) * 1000) / 10;
+      if (delta > 0.01) trend = "up";
+      else if (delta < -0.01) trend = "down";
+    }
 
-  const pattern = [0.28, 0.52, 0.88, 0.65, 0.95, 0.72, 0.82];
-
-  const tfShift =
-    timeframe === "24h"
-      ? [0, 0, 0, 0, 0, 0, 0]
-      : timeframe === "72h"
-        ? [0.04, -0.03, 0.02, -0.04, 0.03, -0.02, 0]
-        : timeframe === "7d"
-          ? [-0.03, 0.04, -0.02, 0.05, -0.03, 0.02, 0]
-          : [0.04, -0.03, 0.05, -0.02, 0.03, -0.04, 0];
-
-  const points = pattern.map((p, i) => {
-    const val = minVal + diff * Math.max(0.08, Math.min(0.98, p + tfShift[i]));
-    return Math.round(val);
-  });
-
-  let xLabels: string[] = [];
-  if (timeframe === "24h") {
-    xLabels = ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "Now"];
-  } else if (timeframe === "72h") {
-    xLabels =
-      lang === "ur"
-        ? ["دن 1", "12:00", "دن 2", "12:00", "دن 3", "12:00", "اب"]
-        : ["Day 1", "12:00", "Day 2", "12:00", "Day 3", "12:00", "Now"];
-  } else if (timeframe === "7d") {
-    xLabels =
-      lang === "ur"
-        ? ["پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ", "اتوار"]
-        : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    return {
+      points,
+      dates: rawDates,
+      xLabels,
+      yLabels,
+      yMinBound,
+      yMaxBound,
+      latestPrice,
+      latestMin: rawMins[rawMins.length - 1] ?? latestPrice,
+      latestMax: rawMaxs[rawMaxs.length - 1] ?? latestPrice,
+      trend,
+      trendPct,
+    };
   } else {
-    xLabels =
-      lang === "ur"
-        ? ["یکم", "5ویں", "10ویں", "15ویں", "20ویں", "25ویں", "آج"]
-        : ["1st", "5th", "10th", "15th", "20th", "25th", "Today"];
+    const points = rawArrivals;
+    const peakArrival = points.length > 0 ? Math.max(...points, 0) : 0;
+    const totalArrival = points.reduce((acc, curr) => acc + curr, 0);
+    const yMinBound = 0;
+    const yMaxBound = peakArrival > 0 ? Math.ceil((peakArrival * 1.25) / 100) * 100 : 1000;
+    const yMidVal = Math.round(yMaxBound / 2);
+
+    const yLabels = [
+      { label: fmtK(yMaxBound), val: yMaxBound },
+      { label: fmtK(yMidVal), val: yMidVal },
+      { label: "0", val: 0 },
+    ];
+
+    return {
+      points,
+      dates: rawDates,
+      xLabels,
+      yLabels,
+      yMinBound,
+      yMaxBound,
+      totalArrival,
+      peakArrival,
+      latestArrival: points[points.length - 1] ?? 0,
+    };
   }
-
-  const yMinBound = 0;
-  const yMaxBound = Math.ceil((maxVal * 1.15) / 1000) * 1000;
-  const yMidVal = Math.round(yMaxBound / 2);
-
-  const fmtK = (v: number) =>
-    v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(Math.round(v));
-
-  const yLabels = [
-    { label: fmtK(yMaxBound), val: yMaxBound },
-    { label: fmtK(yMidVal), val: yMidVal },
-    { label: "0", val: 0 },
-  ];
-
-  const totalArrival = points.reduce((a, b) => a + b, 0);
-  const peakArrival = Math.max(...points);
-
-  return { points, xLabels, yLabels, yMinBound, yMaxBound, totalArrival, peakArrival, baseArrival };
 }
 
 function ProductRatesScreen({
@@ -10664,32 +10269,26 @@ function ProductRatesScreen({
               const pTheme =
                 locScope.kind === "pakistan"
                   ? PROVINCE_THEMES.Pakistan
+                  : locScope.kind === "province"
+                  ? PROVINCE_THEMES[locScope.label] || PROVINCE_THEMES.Punjab
                   : PROVINCE_THEMES[mandiProvince] || PROVINCE_THEMES.Punjab;
 
-              // Build the list of mandis for smooth seamless marquee without clipping
-              let mandiNamesList: string[] = [];
-              if (locScope.kind === "province" && LOCATIONS[locScope.label]) {
-                const dists = LOCATIONS[locScope.label];
-                const allMandis = Object.values(dists).flat();
-                mandiNamesList = allMandis.map((m) => {
-                  const clean = m.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "");
-                  return lang === "ur" ? `${tm(clean)} منڈی` : `${clean} Mandi`;
-                });
-              } else if (locScope.kind === "pakistan") {
-                const allMandis = Object.values(LOCATIONS).flatMap((dists) => Object.values(dists).flat());
-                mandiNamesList = allMandis.slice(0, 10).map((m) => {
-                  const clean = m.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "");
-                  return lang === "ur" ? `${tm(clean)} منڈی` : `${clean} Mandi`;
-                });
+              // Build revolving racetrack strip label: 'Pakistan' or selected mandi name
+              let stripLabel = "";
+              if (locScope.kind === "pakistan") {
+                stripLabel = lang === "ur" ? "پاکستان" : "Pakistan";
+              } else if (locScope.kind === "province") {
+                stripLabel = lang === "ur" ? "صوبہ " + tm(locScope.label) : locScope.label + " Province";
+              } else if (locScope.kind === "district") {
+                stripLabel = lang === "ur" ? "ضلع " + tm(locScope.label) : locScope.label + " District";
+              } else if (locScope.kind === "mandi") {
+                const clean = locScope.label.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "");
+                stripLabel = lang === "ur" ? tm(clean) + " منڈی" : clean + " Mandi";
               } else {
-                mandiNamesList = [cleanMandiName];
+                stripLabel = lang === "ur" ? "پاکستان" : "Pakistan";
               }
 
-              // Ensure at least 8 items per loop cycle
-              let baseItems = mandiNamesList;
-              while (baseItems.length < 8) {
-                baseItems = [...baseItems, ...mandiNamesList];
-              }
+              let baseItems = [stripLabel, stripLabel, stripLabel, stripLabel, stripLabel, stripLabel, stripLabel, stripLabel];
 
               return (
                 <div
@@ -12370,12 +11969,43 @@ function ProductRatesScreen({
                           </thead>
                           <tbody>
                             {tableRows.map((r, ci) => {
+                              // Multi-interval trend calculation derived from real Excel observations
+                              const rowTimeline = getExcelTimeline({
+                                product,
+                                byproduct: r.byproduct || byproduct,
+                                locationLabel: r.mandiName,
+                                locationKind: "mandi",
+                                rateType: r.rateType,
+                                range: "year",
+                              });
+                              const pSeries = rowTimeline.prices;
+                              const pLatest = pSeries[pSeries.length - 1] ?? r.min;
+
+                              // 24h = 1 trading observation prior, 72h = 3 observations prior, weekly = 7 observations prior, monthly = earliest available observation (up to 30 days)
+                              const pPrev =
+                                tableTrendInterval === "72h"
+                                  ? (pSeries[pSeries.length - 4] ?? pSeries[0] ?? pLatest)
+                                  : tableTrendInterval === "weekly"
+                                    ? (pSeries[pSeries.length - 8] ?? pSeries[0] ?? pLatest)
+                                    : tableTrendInterval === "monthly"
+                                      ? (pSeries[0] ?? pLatest)
+                                      : (pSeries[pSeries.length - 2] ?? pLatest);
+
+                              let intervalPct = 0;
+                              let intervalTrend: "up" | "down" | "stable" = "stable";
+                              if (pPrev > 0 && pLatest > 0) {
+                                const delta = pLatest - pPrev;
+                                intervalPct = Math.round((Math.abs(delta) / pPrev) * 1000) / 10;
+                                if (delta > 0.01) intervalTrend = "up";
+                                else if (delta < -0.01) intervalTrend = "down";
+                              }
+
                               const trendArrow =
-                                r.trend === "up" ? "▲" : r.trend === "down" ? "▼" : "—";
+                                intervalTrend === "up" ? "▲" : intervalTrend === "down" ? "▼" : "—";
                               const trendColor =
-                                r.trend === "up"
+                                intervalTrend === "up"
                                   ? "#16A34A"
-                                  : r.trend === "down"
+                                  : intervalTrend === "down"
                                     ? "#C94A43"
                                     : "#52635F";
                               const rtColor = RATE_COLORS[r.rateType] || "#52635F";
@@ -12389,15 +12019,6 @@ function ProductRatesScreen({
                                   (locScope.label === r.mandiName ||
                                     locScope.label.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "") ===
                                     r.mandiName.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "")));
-                              // Each row uses its exact real attributes directly from Excel
-                              const intervalPct =
-                                tableTrendInterval === "72h"
-                                  ? Math.round(r.trendPct * 2.2 * 10) / 10
-                                  : tableTrendInterval === "weekly"
-                                    ? Math.round(r.trendPct * 3.1 * 10) / 10
-                                    : tableTrendInterval === "monthly"
-                                      ? Math.round(r.trendPct * 5.4 * 10) / 10
-                                      : r.trendPct;
                               const rowBg = isSelected
                                 ? "#E4F2EC"
                                 : ci % 2 === 0
@@ -12421,8 +12042,9 @@ function ProductRatesScreen({
                                           rateType: r.rateType,
                                           min: r.min,
                                           max: r.max,
-                                          trend: r.trend as any,
+                                          trend: intervalTrend,
                                           trendPct: intervalPct,
+                                          arrival: r.arrival,
                                         };
                                       });
 
@@ -12458,14 +12080,17 @@ function ProductRatesScreen({
                                         textOverflow: "ellipsis",
                                         maxWidth: 90,
                                         borderRight: "1px solid #D5E2DD",
-                                        fontSize: lang === "ur" ? 13.5 : 11,
                                         fontFamily:
                                           lang === "ur"
                                             ? URDU_FONT
                                             : "inherit",
                                       }}
                                     >
-                                      {tm(r.mandiName.replace(" Mandi", ""))}
+                                      {tm(
+                                        r.mandiName
+                                          .replace(/\s*mandi$/i, "")
+                                          .replace(/\s*منڈی$/i, ""),
+                                      )}
                                     </td>
 
                                     {/* 2. Min – Max */}
@@ -12473,13 +12098,14 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        whiteSpace: "nowrap",
-                                        fontWeight: 800,
                                         color: "#087F63",
-                                        fontSize: lang === "ur" ? 12.5 : 11,
+                                        fontWeight: 800,
+                                        fontSize: 11,
+                                        whiteSpace: "nowrap",
                                       }}
                                     >
-                                      {fmt(r.min)} – {fmt(r.max)}
+                                      {r.min.toLocaleString("en-PK")} –{" "}
+                                      {r.max.toLocaleString("en-PK")}
                                     </td>
 
                                     {/* 3. Price Type */}
@@ -12491,12 +12117,10 @@ function ProductRatesScreen({
                                       }}
                                     >
                                       <span
-                                        className="font-bold px-1.5 py-0.5 rounded-full"
+                                        className="px-1.5 py-0.5 rounded-md font-bold text-[9px]"
                                         style={{
-                                          background: rtColor + "1A",
+                                          background: `${rtColor}15`,
                                           color: rtColor,
-                                          border: `1px solid ${rtColor}30`,
-                                          fontSize: lang === "ur" ? 11 : 9,
                                           fontFamily:
                                             lang === "ur"
                                               ? URDU_FONT
@@ -12543,11 +12167,7 @@ function ProductRatesScreen({
                                               : "inherit",
                                         }}
                                       >
-                                        {lang === "ur"
-                                          ? (r.newOld || r.quality) === "New"
-                                            ? "نیا"
-                                            : (r.newOld || r.quality)
-                                          : (r.newOld || r.quality || "—")}
+                                        {r.newOld || r.quality || "—"}
                                       </span>
                                     </td>
 
@@ -12556,17 +12176,15 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        color: "#2F4A43",
-                                        fontWeight: 600,
+                                        color: r.arrival ? "#087F63" : "#80918B",
+                                        fontWeight: 700,
+                                        fontSize: 10,
                                         whiteSpace: "nowrap",
-                                        fontSize: lang === "ur" ? 13 : 10.5,
-                                        fontFamily:
-                                          lang === "ur"
-                                            ? URDU_FONT
-                                            : "inherit",
                                       }}
                                     >
-                                      {r.arrival || "—"}
+                                      {r.arrival
+                                        ? `${r.arrival} ${lang === "ur" ? "تھیلے" : "Bags"}`
+                                        : "—"}
                                     </td>
 
                                     {/* 7. Color */}
@@ -12574,19 +12192,17 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        color: "#2F4A43",
+                                        color: "#52635F",
                                         fontWeight: 600,
+                                        fontSize: 10,
                                         whiteSpace: "nowrap",
-                                        fontSize: lang === "ur" ? 13 : 10.5,
                                         fontFamily:
                                           lang === "ur"
                                             ? URDU_FONT
                                             : "inherit",
                                       }}
                                     >
-                                      {lang === "ur"
-                                        ? t(r.color) || r.color || "—"
-                                        : r.color || "—"}
+                                      {r.color ? tc(r.color) : "—"}
                                     </td>
 
                                     {/* 8. Variety */}
@@ -12594,19 +12210,17 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        color: "#075E4F",
-                                        fontWeight: 700,
+                                        color: "#52635F",
+                                        fontWeight: 600,
+                                        fontSize: 10,
                                         whiteSpace: "nowrap",
-                                        fontSize: lang === "ur" ? 13 : 10.5,
                                         fontFamily:
                                           lang === "ur"
                                             ? URDU_FONT
                                             : "inherit",
                                       }}
                                     >
-                                      {lang === "ur"
-                                        ? t(r.variety) || r.variety || "—"
-                                        : r.variety || "—"}
+                                      {r.variety || "—"}
                                     </td>
 
                                     {/* 9. Condition */}
@@ -12614,19 +12228,17 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        color: "#2F4A43",
+                                        color: "#52635F",
                                         fontWeight: 600,
+                                        fontSize: 10,
                                         whiteSpace: "nowrap",
-                                        fontSize: lang === "ur" ? 13 : 10.5,
                                         fontFamily:
                                           lang === "ur"
                                             ? URDU_FONT
                                             : "inherit",
                                       }}
                                     >
-                                      {lang === "ur"
-                                        ? t(r.condition || r.quality) || r.condition || r.quality || "—"
-                                        : r.condition || r.quality || "—"}
+                                      {r.condition || r.quality || "—"}
                                     </td>
 
                                     {/* 10. Specification */}
@@ -12634,163 +12246,157 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        color: "#2F4A43",
+                                        color: "#52635F",
                                         fontWeight: 600,
+                                        fontSize: 10,
                                         whiteSpace: "nowrap",
-                                        fontSize: lang === "ur" ? 13 : 10.5,
                                         fontFamily:
                                           lang === "ur"
                                             ? URDU_FONT
                                             : "inherit",
                                       }}
                                     >
-                                      {lang === "ur"
-                                        ? t(r.spec) || r.spec || "—"
-                                        : r.spec || "—"}
+                                      {r.spec || "—"}
                                     </td>
                                   </tr>
 
                                   {/* Inline Expandable Trend Graph Row directly below this clicked row */}
                                   {isRowModalActive && (
-                                    <tr
-                                      style={{
-                                        background: "#F1F8F5",
-                                        borderBottom: "1.5px solid #C7E8D8",
-                                      }}
-                                    >
+                                    <tr>
                                       <td
                                         colSpan={10}
-                                        style={{
-                                          padding: "8px 6px 10px 6px",
-                                          background: "#F4FAF7",
-                                          borderBottom: "1.5px solid #C7E8D8",
-                                        }}
+                                        className="p-0 border-b-2 border-[#10B981]"
+                                        style={{ background: "#F4FAF7" }}
                                       >
-                                        <div
-                                          style={{
-                                            position: "sticky",
-                                            left: 6,
-                                            width: "calc(min(100vw, 448px) - 16px)",
-                                            maxWidth: "calc(100vw - 16px)",
-                                            boxSizing: "border-box",
-                                          }}
-                                          className="bg-white rounded-2xl border border-[#D5E2DD] p-3 shadow-md flex flex-col gap-2 relative overflow-hidden zm-beam-border zm-beam-border-card animate-in fade-in slide-in-from-top-1 duration-200"
-                                        >
+                                        <div className="p-2.5 flex flex-col gap-2 shadow-inner">
                                           {/* 1. Header: Dot + Mandi Title + Tabs (Price vs Arrival) + Close 'X' */}
-                                          <div className="flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                              <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] flex-shrink-0 animate-pulse" />
-                                              <h3
-                                                className="font-black text-[13.5px] text-[#111827] truncate"
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5">
+                                              <span
+                                                className="w-2.5 h-2.5 rounded-full inline-block animate-pulse"
+                                                style={{
+                                                  background:
+                                                    tableGraphView === "price"
+                                                      ? "#10B981"
+                                                      : "#059669",
+                                                }}
+                                              />
+                                              <span
+                                                className="font-black text-xs text-[#064D40]"
                                                 style={{
                                                   fontFamily:
                                                     lang === "ur"
                                                       ? URDU_FONT
                                                       : "inherit",
-                                                  fontSize: lang === "ur" ? 15.5 : 13.5,
                                                 }}
                                               >
-                                                {lang === "ur"
-                                                  ? tm(r.mandiName)
-                                                  : r.mandiName.includes("Mandi")
-                                                    ? r.mandiName
-                                                    : `${r.mandiName} Mandi`}
-                                              </h3>
+                                                {tm(
+                                                  r.mandiName
+                                                    .replace(/\s*mandi$/i, "")
+                                                    .replace(/\s*منڈی$/i, ""),
+                                                )}{" "}
+                                                ({tr(r.rateType)})
+                                              </span>
                                             </div>
 
                                             {/* Graph View Switcher Tabs: Price vs Arrival */}
-                                            <div className="flex items-center bg-[#EAF5F0] p-1 rounded-full border border-[#CDE5DC] flex-shrink-0 gap-1">
+                                            <div className="flex items-center gap-1.5">
+                                              <div className="flex items-center bg-[#E5EFEA] p-0.5 rounded-lg border border-[#CCE2D7]">
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setTableGraphView("price");
+                                                  }}
+                                                  className="tap-target px-2 py-0.5 rounded-md text-[9.5px] font-extrabold transition"
+                                                  style={{
+                                                    background:
+                                                      tableGraphView === "price"
+                                                        ? "#10B981"
+                                                        : "transparent",
+                                                    color:
+                                                      tableGraphView === "price"
+                                                        ? "#FFFFFF"
+                                                        : "#4E665E",
+                                                    fontFamily:
+                                                      lang === "ur"
+                                                        ? URDU_FONT
+                                                        : "inherit",
+                                                  }}
+                                                >
+                                                  {lang === "ur" ? "ریٹ" : "Price"}
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setTableGraphView("arrival");
+                                                  }}
+                                                  className="tap-target px-2 py-0.5 rounded-md text-[9.5px] font-extrabold transition"
+                                                  style={{
+                                                    background:
+                                                      tableGraphView === "arrival"
+                                                        ? "#059669"
+                                                        : "transparent",
+                                                    color:
+                                                      tableGraphView === "arrival"
+                                                        ? "#FFFFFF"
+                                                        : "#4E665E",
+                                                    fontFamily:
+                                                      lang === "ur"
+                                                        ? URDU_FONT
+                                                        : "inherit",
+                                                  }}
+                                                >
+                                                  {lang === "ur" ? "آمد" : "Arrival"}
+                                                </button>
+                                              </div>
+
                                               <button
                                                 type="button"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  setTableGraphView("price");
+                                                  setSelectedMandiGraphRow(null);
                                                 }}
-                                                className={`px-3 py-1 rounded-full text-xs font-black transition active:scale-95 ${tableGraphView === "price"
-                                                  ? "zm-beam-border bg-[#087F63] text-white shadow-sm"
-                                                  : "text-[#2D5A4C] hover:text-[#087F63] bg-transparent"
-                                                  }`}
-                                                style={{
-                                                  fontFamily: lang === "ur" ? URDU_FONT : "inherit",
-                                                  fontSize: lang === "ur" ? 13 : 11.5,
-                                                }}
+                                                className="tap-target w-5 h-5 rounded-full bg-[#E5EFEA] hover:bg-[#D5E5DE] text-[#064D40] text-xs font-bold flex items-center justify-center transition"
+                                                title="Close"
                                               >
-                                                {lang === "ur" ? "قیمت" : "Price"}
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setTableGraphView("arrival");
-                                                }}
-                                                className={`px-3 py-1 rounded-full text-xs font-black transition active:scale-95 ${tableGraphView === "arrival"
-                                                  ? "zm-beam-border bg-[#087F63] text-white shadow-sm"
-                                                  : "text-[#2D5A4C] hover:text-[#087F63] bg-transparent"
-                                                  }`}
-                                                style={{
-                                                  fontFamily: lang === "ur" ? URDU_FONT : "inherit",
-                                                  fontSize: lang === "ur" ? 13 : 11.5,
-                                                }}
-                                              >
-                                                {lang === "ur" ? "آمد" : "Arrival"}
+                                                ✕
                                               </button>
                                             </div>
-
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedMandiGraphRow(null);
-                                              }}
-                                              className="tap-target w-6 h-6 rounded-full bg-[#F3F4F6] hover:bg-[#E5E7EB] active:scale-95 flex items-center justify-center text-[#6B7280] transition flex-shrink-0"
-                                              title={lang === "ur" ? "گراف بند کریں" : "Close graph"}
-                                            >
-                                              <svg
-                                                width="11"
-                                                height="11"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2.5"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                              >
-                                                <line x1="18" y1="6" x2="6" y2="18" />
-                                                <line x1="6" y1="6" x2="18" y2="18" />
-                                              </svg>
-                                            </button>
                                           </div>
 
                                           {/* 2. Timeframe Filter Pills */}
-                                          <div className="flex items-center gap-1 w-full justify-between">
-                                            {[
-                                              { id: "24h", labelEn: "24H", labelUr: "24 گھنٹے" },
-                                              { id: "72h", labelEn: "72H", labelUr: "72 گھنٹے" },
-                                              { id: "7d", labelEn: "7D", labelUr: "7 دن" },
-                                              { id: "30d", labelEn: "30D", labelUr: "30 دن" },
-                                            ].map((tf) => {
-                                              const isActive = graphTimeframe === tf.id;
+                                          <div className="flex items-center gap-1">
+                                            {(
+                                              [
+                                                { id: "24h", labelUr: "24گھنٹے", labelEn: "24h" },
+                                                { id: "72h", labelUr: "72گھنٹے", labelEn: "72h" },
+                                                { id: "7d", labelUr: "7 دن", labelEn: "7D" },
+                                                { id: "30d", labelUr: "30 دن", labelEn: "30D" },
+                                              ] as const
+                                            ).map((tf) => {
+                                              const active = graphTimeframe === tf.id;
                                               return (
                                                 <button
                                                   key={tf.id}
                                                   type="button"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setGraphTimeframe(tf.id as any);
+                                                    setGraphTimeframe(tf.id);
                                                   }}
-                                                  className={`flex-1 py-0.5 px-1 rounded-full font-extrabold text-[9.5px] transition text-center active:scale-[0.97] ${isActive ? "zm-beam-border" : ""
-                                                    }`}
+                                                  className="tap-target px-2 py-0.5 rounded-md text-[9.5px] font-extrabold transition"
                                                   style={{
-                                                    background: isActive ? "#087F63" : "#F4FAF7",
-                                                    color: isActive ? "#FFFFFF" : "#374151",
-                                                    border: isActive
-                                                      ? "1px solid #087F63"
-                                                      : "1px solid #D5E2DD",
+                                                    background: active
+                                                      ? tableGraphView === "price"
+                                                        ? "#10B981"
+                                                        : "#059669"
+                                                      : "#E5EFEA",
+                                                    color: active ? "#FFFFFF" : "#4E665E",
                                                     fontFamily:
                                                       lang === "ur"
                                                         ? URDU_FONT
                                                         : "inherit",
-                                                    fontSize: lang === "ur" ? 11 : 9.5,
                                                   }}
                                                 >
                                                   {lang === "ur" ? tf.labelUr : tf.labelEn}
@@ -12803,222 +12409,230 @@ function ProductRatesScreen({
                                           {tableGraphView === "price" ? (
                                             <>
                                               {/* Price Rates Summary Box */}
-                                              <div className="rounded-lg p-1.5 px-2 bg-[#F4FAF7] border border-[#D5E2DD] flex items-center justify-between">
-                                                <div className="flex items-center gap-2.5">
-                                                  <div>
-                                                    <span className="text-[8.5px] font-bold text-[#6B7280] uppercase tracking-wider block leading-none">
-                                                      {lang === "ur" ? "کم سے کم ریٹ" : "Min Rate"}
-                                                    </span>
-                                                    <span className="text-xs font-black text-[#1F2937] block mt-0.5 leading-tight">
-                                                      Rs.{Math.round(r.min * effMult).toLocaleString()}
-                                                    </span>
-                                                  </div>
-                                                  <div className="w-[1px] h-5 bg-[#D5E2DD]" />
-                                                  <div>
-                                                    <span className="text-[8.5px] font-bold text-[#6B7280] uppercase tracking-wider block leading-none">
-                                                      {lang === "ur" ? "زیادہ سے زیادہ ریٹ" : "Max Rate"}
-                                                    </span>
-                                                    <span className="text-xs font-black text-[#087F63] block mt-0.5 leading-tight">
-                                                      Rs.{Math.round(r.max * effMult).toLocaleString()}
-                                                    </span>
-                                                  </div>
-                                                </div>
-                                                <div
-                                                  className="px-2 py-0.5 rounded-md text-[10.5px] font-black flex items-center gap-1"
-                                                  style={{
-                                                    background:
-                                                      r.trend === "down" ? "#FEE2E2" : "#E8F8F0",
-                                                    color:
-                                                      r.trend === "down" ? "#DC2626" : "#059669",
-                                                  }}
-                                                >
-                                                  <span>
-                                                    {r.trend === "up"
-                                                      ? "▲"
-                                                      : r.trend === "down"
-                                                        ? "▼"
-                                                        : "—"}
-                                                  </span>
-                                                  <span>
-                                                    {intervalPct > 0 ? `${intervalPct}%` : "1.8%"}
-                                                  </span>
-                                                </div>
-                                              </div>
-
-                                              {/* Price Visual Line Chart */}
                                               {(() => {
-                                                const graphData = getMandiModalGraphData(
-                                                  Math.round(r.min * effMult),
-                                                  Math.round(r.max * effMult),
-                                                  r.trend as any,
-                                                  graphTimeframe,
+                                                const graphData = getRealMandiInlineGraphData({
+                                                  product,
+                                                  byproduct: r.byproduct || byproduct,
+                                                  mandiName: r.mandiName,
+                                                  rateType: r.rateType,
+                                                  timeframe: graphTimeframe,
                                                   lang,
-                                                );
-                                                const W = 350;
-                                                const H = 115;
-                                                const xLeft = 34;
-                                                const xRight = 334;
-                                                const yTop = 12;
-                                                const yBottom = 84;
-
-                                                const coords = graphData.points.map((p, i) => {
-                                                  const x =
-                                                    xLeft + (i / (graphData.points.length - 1)) * (xRight - xLeft);
-                                                  const y =
-                                                    yBottom -
-                                                    ((p - graphData.yMinBound) /
-                                                      (graphData.yMaxBound - graphData.yMinBound)) *
-                                                    (yBottom - yTop);
-                                                  return { x, y, val: p };
+                                                  view: "price",
                                                 });
-
-                                                const linePath = coords
-                                                  .map((c, i) => (i === 0 ? `M ${c.x} ${c.y}` : `L ${c.x} ${c.y}`))
-                                                  .join(" ");
-                                                const areaPath = `${linePath} L ${coords[coords.length - 1].x} ${yBottom + 6} L ${coords[0].x} ${yBottom + 6} Z`;
-                                                const yMidY = (yTop + yBottom) / 2;
-
                                                 return (
-                                                  <div className="rounded-lg border border-[#D5E2DD] p-1 bg-white flex flex-col justify-center">
-                                                    <svg
-                                                      viewBox={`0 0 ${W} ${H}`}
-                                                      className="w-full h-auto"
-                                                      style={{ maxHeight: 110, overflow: "visible" }}
-                                                    >
-                                                      <defs>
-                                                        <linearGradient
-                                                          id={`mandiInlineGraphGrad-${ci}`}
-                                                          x1="0"
-                                                          y1="0"
-                                                          x2="0"
-                                                          y2="1"
-                                                        >
-                                                          <stop
-                                                            offset="0%"
-                                                            stopColor="#10B981"
-                                                            stopOpacity="0.25"
-                                                          />
-                                                          <stop
-                                                            offset="100%"
-                                                            stopColor="#10B981"
-                                                            stopOpacity="0.0"
-                                                          />
-                                                        </linearGradient>
-                                                      </defs>
-
-                                                      {/* Top Grid */}
-                                                      <line
-                                                        x1={xLeft}
-                                                        y1={yTop}
-                                                        x2={xRight}
-                                                        y2={yTop}
-                                                        stroke="#E5E7EB"
-                                                        strokeDasharray="3 3"
-                                                        strokeWidth="1"
-                                                      />
-                                                      <text
-                                                        x={xLeft - 5}
-                                                        y={yTop + 3}
-                                                        textAnchor="end"
-                                                        fill="#9CA3AF"
-                                                        fontSize="7.5"
-                                                        fontWeight="600"
+                                                  <>
+                                                    <div className="rounded-lg p-1.5 px-2 bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between">
+                                                      <div className="flex items-center gap-2.5">
+                                                        <div>
+                                                          <span className="text-[8.5px] font-bold text-[#15803D] uppercase tracking-wider block leading-none">
+                                                            {lang === "ur" ? "کم سے کم" : "Min Rate"}
+                                                          </span>
+                                                          <span className="text-xs font-black text-[#14532D] block mt-0.5 leading-tight">
+                                                            Rs.{graphData.latestMin.toLocaleString()}
+                                                          </span>
+                                                        </div>
+                                                        <div className="w-[1px] h-5 bg-[#BBF7D0]" />
+                                                        <div>
+                                                          <span className="text-[8.5px] font-bold text-[#15803D] uppercase tracking-wider block leading-none">
+                                                            {lang === "ur" ? "زیادہ سے زیادہ" : "Max Rate"}
+                                                          </span>
+                                                          <span className="text-xs font-black text-[#087F63] block mt-0.5 leading-tight">
+                                                            Rs.{graphData.latestMax.toLocaleString()}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                      <div
+                                                        className="px-2 py-0.5 rounded-md text-[10.5px] font-black flex items-center gap-1"
+                                                        style={{
+                                                          background:
+                                                            graphData.trend === "down" ? "#FEE2E2" : "#E8F8F0",
+                                                          color:
+                                                            graphData.trend === "down" ? "#DC2626" : "#059669",
+                                                        }}
                                                       >
-                                                        {graphData.yLabels[0].label}
-                                                      </text>
+                                                        <span>
+                                                          {graphData.trend === "up"
+                                                            ? "▲"
+                                                            : graphData.trend === "down"
+                                                              ? "▼"
+                                                              : "—"}
+                                                        </span>
+                                                        <span>
+                                                          {graphData.trendPct > 0 ? `${graphData.trendPct}%` : "0.0%"}
+                                                        </span>
+                                                      </div>
+                                                    </div>
 
-                                                      {/* Mid Grid */}
-                                                      <line
-                                                        x1={xLeft}
-                                                        y1={yMidY}
-                                                        x2={xRight}
-                                                        y2={yMidY}
-                                                        stroke="#E5E7EB"
-                                                        strokeDasharray="3 3"
-                                                        strokeWidth="1"
-                                                      />
-                                                      <text
-                                                        x={xLeft - 5}
-                                                        y={yMidY + 3}
-                                                        textAnchor="end"
-                                                        fill="#9CA3AF"
-                                                        fontSize="7.5"
-                                                        fontWeight="600"
-                                                      >
-                                                        {graphData.yLabels[1].label}
-                                                      </text>
+                                                    {/* Price Visual Line Chart */}
+                                                    {(() => {
+                                                      const W = 350;
+                                                      const H = 115;
+                                                      const xLeft = 34;
+                                                      const xRight = 334;
+                                                      const yTop = 12;
+                                                      const yBottom = 84;
 
-                                                      {/* Bot Grid */}
-                                                      <line
-                                                        x1={xLeft}
-                                                        y1={yBottom}
-                                                        x2={xRight}
-                                                        y2={yBottom}
-                                                        stroke="#E5E7EB"
-                                                        strokeDasharray="3 3"
-                                                        strokeWidth="1"
-                                                      />
-                                                      <text
-                                                        x={xLeft - 5}
-                                                        y={yBottom + 3}
-                                                        textAnchor="end"
-                                                        fill="#9CA3AF"
-                                                        fontSize="7.5"
-                                                        fontWeight="600"
-                                                      >
-                                                        {graphData.yLabels[2].label}
-                                                      </text>
+                                                      const coords = graphData.points.map((p, i) => {
+                                                        const x =
+                                                          xLeft + (i / (graphData.points.length - 1 || 1)) * (xRight - xLeft);
+                                                        const y =
+                                                          yBottom -
+                                                          ((p - graphData.yMinBound) /
+                                                            (graphData.yMaxBound - graphData.yMinBound || 1)) *
+                                                          (yBottom - yTop);
+                                                        return { x, y, val: p };
+                                                      });
 
-                                                      {/* Area under curve */}
-                                                      <path
-                                                        d={areaPath}
-                                                        fill={`url(#mandiInlineGraphGrad-${ci})`}
-                                                      />
+                                                      const linePath = coords
+                                                        .map((c, i) => (i === 0 ? `M ${c.x} ${c.y}` : `L ${c.x} ${c.y}`))
+                                                        .join(" ");
+                                                      const areaPath = `${linePath} L ${coords[coords.length - 1].x} ${yBottom + 6} L ${coords[0].x} ${yBottom + 6} Z`;
+                                                      const yMidY = (yTop + yBottom) / 2;
 
-                                                      {/* Line curve */}
-                                                      <path
-                                                        d={linePath}
-                                                        fill="none"
-                                                        stroke="#10B981"
-                                                        strokeWidth="2"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                      />
+                                                      return (
+                                                        <div className="rounded-lg border border-[#D5E2DD] p-1 bg-white flex flex-col justify-center">
+                                                          <svg
+                                                            viewBox={`0 0 ${W} ${H}`}
+                                                            className="w-full h-auto"
+                                                            style={{ maxHeight: 110, overflow: "visible" }}
+                                                          >
+                                                            <defs>
+                                                              <linearGradient
+                                                                id={`mandiInlineGraphGrad-${ci}`}
+                                                                x1="0"
+                                                                y1="0"
+                                                                x2="0"
+                                                                y2="1"
+                                                              >
+                                                                <stop
+                                                                  offset="0%"
+                                                                  stopColor="#10B981"
+                                                                  stopOpacity="0.25"
+                                                                />
+                                                                <stop
+                                                                  offset="100%"
+                                                                  stopColor="#10B981"
+                                                                  stopOpacity="0.0"
+                                                                />
+                                                              </linearGradient>
+                                                            </defs>
 
-                                                      {/* Node points */}
-                                                      {coords.map((c, i) => (
-                                                        <circle
-                                                          key={i}
-                                                          cx={c.x}
-                                                          cy={c.y}
-                                                          r="2.8"
-                                                          fill="#FFFFFF"
-                                                          stroke="#10B981"
-                                                          strokeWidth="1.8"
-                                                        />
-                                                      ))}
+                                                            {/* Top Grid */}
+                                                            <line
+                                                              x1={xLeft}
+                                                              y1={yTop}
+                                                              x2={xRight}
+                                                              y2={yTop}
+                                                              stroke="#E5E7EB"
+                                                              strokeDasharray="3 3"
+                                                              strokeWidth="1"
+                                                            />
+                                                            <text
+                                                              x={xLeft - 5}
+                                                              y={yTop + 3}
+                                                              textAnchor="end"
+                                                              fill="#9CA3AF"
+                                                              fontSize="7.5"
+                                                              fontWeight="600"
+                                                            >
+                                                              {graphData.yLabels[0].label}
+                                                            </text>
 
-                                                      {/* X-axis Labels */}
-                                                      {graphData.xLabels.map((lbl, i) => (
-                                                        <text
-                                                          key={i}
-                                                          x={coords[i].x}
-                                                          y={H - 5}
-                                                          textAnchor="middle"
-                                                          fill="#9CA3AF"
-                                                          fontSize="7.5"
-                                                          fontWeight="600"
-                                                          fontFamily={
-                                                            lang === "ur"
-                                                              ? URDU_FONT
-                                                              : "inherit"
-                                                          }
-                                                        >
-                                                          {lbl}
-                                                        </text>
-                                                      ))}
-                                                    </svg>
-                                                  </div>
+                                                            {/* Mid Grid */}
+                                                            <line
+                                                              x1={xLeft}
+                                                              y1={yMidY}
+                                                              x2={xRight}
+                                                              y2={yMidY}
+                                                              stroke="#E5E7EB"
+                                                              strokeDasharray="3 3"
+                                                              strokeWidth="1"
+                                                            />
+                                                            <text
+                                                              x={xLeft - 5}
+                                                              y={yMidY + 3}
+                                                              textAnchor="end"
+                                                              fill="#9CA3AF"
+                                                              fontSize="7.5"
+                                                              fontWeight="600"
+                                                            >
+                                                              {graphData.yLabels[1].label}
+                                                            </text>
+
+                                                            {/* Bot Grid */}
+                                                            <line
+                                                              x1={xLeft}
+                                                              y1={yBottom}
+                                                              x2={xRight}
+                                                              y2={yBottom}
+                                                              stroke="#E5E7EB"
+                                                              strokeDasharray="3 3"
+                                                              strokeWidth="1"
+                                                            />
+                                                            <text
+                                                              x={xLeft - 5}
+                                                              y={yBottom + 3}
+                                                              textAnchor="end"
+                                                              fill="#9CA3AF"
+                                                              fontSize="7.5"
+                                                              fontWeight="600"
+                                                            >
+                                                              {graphData.yLabels[2].label}
+                                                            </text>
+
+                                                            {/* Area under curve */}
+                                                            <path
+                                                              d={areaPath}
+                                                              fill={`url(#mandiInlineGraphGrad-${ci})`}
+                                                            />
+
+                                                            {/* Line curve */}
+                                                            <path
+                                                              d={linePath}
+                                                              fill="none"
+                                                              stroke="#10B981"
+                                                              strokeWidth="2"
+                                                              strokeLinecap="round"
+                                                              strokeLinejoin="round"
+                                                            />
+
+                                                            {/* Node points */}
+                                                            {coords.map((c, i) => (
+                                                              <circle
+                                                                key={i}
+                                                                cx={c.x}
+                                                                cy={c.y}
+                                                                r="2.8"
+                                                                fill="#FFFFFF"
+                                                                stroke="#10B981"
+                                                                strokeWidth="1.8"
+                                                              />
+                                                            ))}
+
+                                                            {/* X-axis Labels */}
+                                                            {graphData.xLabels.map((lbl, i) => (
+                                                              <text
+                                                                key={i}
+                                                                x={coords[i]?.x ?? xLeft}
+                                                                y={H - 5}
+                                                                textAnchor="middle"
+                                                                fill="#9CA3AF"
+                                                                fontSize="7.5"
+                                                                fontWeight="600"
+                                                                fontFamily={
+                                                                  lang === "ur"
+                                                                    ? URDU_FONT
+                                                                    : "inherit"
+                                                                }
+                                                              >
+                                                                {lbl}
+                                                              </text>
+                                                            ))}
+                                                          </svg>
+                                                        </div>
+                                                      );
+                                                    })()}
+                                                  </>
                                                 );
                                               })()}
                                             </>
@@ -13026,11 +12640,15 @@ function ProductRatesScreen({
                                             <>
                                               {/* Arrival Volume Summary Box */}
                                               {(() => {
-                                                const arrivalData = getMandiArrivalModalGraphData(
-                                                  (r as any).arrival || (r as any).arrivalCount || "8,400",
-                                                  graphTimeframe,
+                                                const arrivalData = getRealMandiInlineGraphData({
+                                                  product,
+                                                  byproduct: r.byproduct || byproduct,
+                                                  mandiName: r.mandiName,
+                                                  rateType: r.rateType,
+                                                  timeframe: graphTimeframe,
                                                   lang,
-                                                );
+                                                  view: "arrival",
+                                                });
 
                                                 return (
                                                   <>
@@ -13041,7 +12659,7 @@ function ProductRatesScreen({
                                                             {lang === "ur" ? "کل آمد" : "Total Arrivals"}
                                                           </span>
                                                           <span className="text-xs font-black text-[#14532D] block mt-0.5 leading-tight">
-                                                            {arrivalData.totalArrival.toLocaleString()}{" "}
+                                                            {arrivalData.latestArrival.toLocaleString()}{" "}
                                                             <span className="text-[9px] font-semibold text-[#16A34A]">
                                                               {lang === "ur" ? "تھیلے" : "Bags"}
                                                             </span>
@@ -13076,10 +12694,12 @@ function ProductRatesScreen({
 
                                                       const coords = arrivalData.points.map((p, i) => {
                                                         const x =
-                                                          xLeft + (i / (arrivalData.points.length - 1)) * (xRight - xLeft);
+                                                          xLeft + (i / (arrivalData.points.length - 1 || 1)) * (xRight - xLeft);
                                                         const y =
                                                           yBottom -
-                                                          (p / arrivalData.yMaxBound) * (yBottom - yTop);
+                                                          ((p - arrivalData.yMinBound) /
+                                                            (arrivalData.yMaxBound - arrivalData.yMinBound || 1)) *
+                                                          (yBottom - yTop);
                                                         return { x, y, val: p };
                                                       });
 
@@ -13213,7 +12833,7 @@ function ProductRatesScreen({
                                                             {arrivalData.xLabels.map((lbl, i) => (
                                                               <text
                                                                 key={i}
-                                                                x={coords[i].x}
+                                                                x={coords[i]?.x ?? xLeft}
                                                                 y={H - 5}
                                                                 textAnchor="middle"
                                                                 fill="#9CA3AF"
@@ -13477,28 +13097,41 @@ function ProductRatesScreen({
                   (r) => !byproduct || isMatchByproduct(r.byproduct, byproduct),
                 );
 
-                // Apply column filters
-                // Date-seeded variance: different days show slightly different prices
-                const dateSeed =
-                  dtSelDate.getFullYear() * 10000 +
-                  (dtSelDate.getMonth() + 1) * 100 +
-                  dtSelDate.getDate();
-                const dateVariance = (base: number) => {
-                  const hash = ((dateSeed * 2654435761) >>> 0) % 1000;
-                  const pct = (hash / 1000 - 0.5) * 0.08; // ±4% variance
-                  return Math.round(base * (1 + pct));
-                };
+                // Query actual real Excel observations for the selected historical date
+                const selYear = dtSelDate.getFullYear();
+                const selMonth = String(dtSelDate.getMonth() + 1).padStart(2, "0");
+                const selDay = String(dtSelDate.getDate()).padStart(2, "0");
+                const targetDateKey = `${selYear}-${selMonth}-${selDay}`;
+
+                const dateIdx = REAL_DATES_TIMELINE.indexOf(targetDateKey);
 
                 const filteredTableRows = allTableRows
                   .filter((r) => {
                     if (dtPriceType && r.rateType !== dtPriceType) return false;
                     return true;
                   })
-                  .map((r) => ({
-                    ...r,
-                    min: dateVariance(r.min),
-                    max: dateVariance(r.max),
-                  }));
+                  .map((r) => {
+                    if (dateIdx >= 0) {
+                      const rowTimeline = getExcelTimeline({
+                        product,
+                        byproduct: r.byproduct || byproduct,
+                        locationLabel: r.mandiName,
+                        locationKind: "mandi",
+                        rateType: r.rateType,
+                        range: "year",
+                      });
+                      const mi = rowTimeline.mins[dateIdx] ?? r.min;
+                      const mx = rowTimeline.maxs[dateIdx] ?? r.max;
+                      const arr = rowTimeline.arrivals[dateIdx] ?? 0;
+                      return {
+                        ...r,
+                        min: mi,
+                        max: mx,
+                        arrival: arr > 0 ? arr.toLocaleString("en-PK") : "—",
+                      };
+                    }
+                    return r;
+                  });
 
                 const allPriceTypes = [
                   ...new Set(allTableRows.map((r) => r.rateType)),
