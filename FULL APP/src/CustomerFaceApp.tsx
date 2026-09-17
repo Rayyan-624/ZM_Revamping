@@ -7233,24 +7233,24 @@ function ByProductCombinedScreen({
                           background: selected
                             ? "#087F63"
                             : isRef
-                            ? "#E4F2EC"
-                            : inRange
-                            ? "rgba(16, 185, 129, 0.08)"
-                            : "transparent",
+                              ? "#E4F2EC"
+                              : inRange
+                                ? "rgba(16, 185, 129, 0.08)"
+                                : "transparent",
                           color: selected
                             ? "#fff"
                             : isRef
-                            ? "#075E4F"
-                            : inRange
-                            ? "#143B33"
-                            : "#94A3B8",
+                              ? "#075E4F"
+                              : inRange
+                                ? "#143B33"
+                                : "#94A3B8",
                           border: isRef && !selected
                             ? "1.5px solid #087F63"
                             : selected
-                            ? "none"
-                            : inRange
-                            ? "1px solid rgba(16, 185, 129, 0.25)"
-                            : "none",
+                              ? "none"
+                              : inRange
+                                ? "1px solid rgba(16, 185, 129, 0.25)"
+                                : "none",
                         }}
                       >
                         {lang === "ur" ? toUrduDigits(day) : day}
@@ -11161,35 +11161,27 @@ function ProductRatesScreen({
                 return lang === "ur" ? `${mLabel}، ${dLabel}، ${pLabel}` : `${mLabel}, ${dLabel}, ${pLabel}`;
               };
 
-              // Build revolving racetrack strip items: Mandi + District + Province triad
+              // Build revolving racetrack strip items based on active location scope
               let baseItems: string[] = [];
-              if (locScope.kind === "mandi") {
+              if (locScope.kind === "pakistan") {
+                const pakLabel = lang === "ur" ? "پاکستان" : "Pakistan";
+                baseItems = [pakLabel, pakLabel, pakLabel, pakLabel, pakLabel, pakLabel, pakLabel, pakLabel];
+              } else if (locScope.kind === "province") {
+                const provLabel = lang === "ur" ? "صوبہ " + tm(locScope.label) : locScope.label + " Province";
+                baseItems = [provLabel, provLabel, provLabel, provLabel, provLabel, provLabel, provLabel, provLabel];
+              } else if (locScope.kind === "district") {
+                const distLabel = lang === "ur" ? "ضلع " + tm(locScope.label) : locScope.label + " District";
+                baseItems = [distLabel, distLabel, distLabel, distLabel, distLabel, distLabel, distLabel, distLabel];
+              } else if (locScope.kind === "mandi") {
                 const item = formatMandiTriad(
                   activeMandiObj ? activeMandiObj.name : locScope.label,
                   activeMandiObj?.city,
                   activeMandiObj?.province || mandiProvince,
                 );
                 baseItems = [item, item, item, item, item, item];
-              } else if (locScope.kind === "district") {
-                const distMandis = INITIAL_MANDIS.filter(
-                  (m) => m.city.toLowerCase() === locScope.label.toLowerCase(),
-                );
-                const items = distMandis.length > 0
-                  ? distMandis.map((m) => formatMandiTriad(m.name, m.city, m.province))
-                  : [formatMandiTriad(locScope.label, locScope.label, mandiProvince)];
-                baseItems = items.length < 4 ? [...items, ...items, ...items, ...items].slice(0, 6) : items;
-              } else if (locScope.kind === "province") {
-                const provMandis = INITIAL_MANDIS.filter(
-                  (m) => m.province.toLowerCase() === locScope.label.toLowerCase(),
-                );
-                const items = provMandis.length > 0
-                  ? provMandis.map((m) => formatMandiTriad(m.name, m.city, m.province))
-                  : [formatMandiTriad(locScope.label, locScope.label, locScope.label)];
-                baseItems = items.length < 4 ? [...items, ...items, ...items].slice(0, 6) : items;
               } else {
-                // Pakistan / All
-                const mandiList = INITIAL_MANDIS.map((m) => formatMandiTriad(m.name, m.city, m.province));
-                baseItems = mandiList.length > 0 ? mandiList : [formatMandiTriad("Pakpattan", "Pakpattan", "Punjab")];
+                const pakLabel = lang === "ur" ? "پاکستان" : "Pakistan";
+                baseItems = [pakLabel, pakLabel, pakLabel, pakLabel, pakLabel, pakLabel, pakLabel, pakLabel];
               }
 
               return (
@@ -11611,8 +11603,8 @@ function ProductRatesScreen({
                             >
                               {statArrival > 0
                                 ? (lang === "ur"
-                                    ? `${toUrduDigits(statArrival.toLocaleString())}`
-                                    : statArrival.toLocaleString())
+                                  ? `${toUrduDigits(statArrival.toLocaleString())}`
+                                  : statArrival.toLocaleString())
                                 : "—"}
                             </span>
                             <span className="text-[7.5px] text-[#80918B] leading-none mt-0.5">
@@ -11628,49 +11620,52 @@ function ProductRatesScreen({
 
                     {/* Attributes Bar: Consistent Rate Type Button + 5 More Attributes Toggle */}
                     <div className="w-full flex items-center justify-between gap-2 py-0.5 px-0.5">
-                      {/* 1. EXPOSED RATE TYPE (Consistent with attribute button styling, inline arrow) */}
+                      {/* 1. EXPOSED RATE TYPE (Clean pill with icon, label & value) */}
                       <button
                         type="button"
                         onClick={() => setAttrSheet("ratetype")}
-                        className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group py-0.5 min-w-0"
+                        className="tap-target flex items-center gap-1.5 py-1 px-2.5 rounded-xl border transition-all duration-150 active:scale-95 hover:border-[#087F63] min-w-0"
+                        style={{
+                          background: "linear-gradient(135deg, #F0FAF5 0%, #E6F7F0 100%)",
+                          borderColor: "#A7F3D0",
+                          boxShadow: "0 1px 3px rgba(8,127,99,0.06)",
+                        }}
                         title={lang === "ur" ? "نرخ کی قسم تبدیل کریں" : "Change Rate Type"}
                       >
                         <div
-                          className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ background: "#E8F5EE", color: "#087F63" }}
+                          className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: "#087F63", color: "#FFFFFF" }}
                         >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M4 19h4V9H4v10zm6 0h4V4h-4v15zm6 0h4v-7h-4v7z" />
                           </svg>
                         </div>
-                        <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <span
-                            className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
+                            className="text-[9px] font-semibold text-[#065F46] whitespace-nowrap"
                             style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                           >
-                            {lang === "ur" ? "نرخ کی قسم" : "Rate Type"}
+                            {lang === "ur" ? "نرخ:" : "Rate:"}
                           </span>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span
-                              className="font-bold text-[11.5px] leading-tight truncate text-[#075E4F]"
-                              style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                            >
-                              {attrRateType ? tr(attrRateType).replace(" ریٹ", "").replace(" Rate", "") : (lang === "ur" ? "منڈی" : "Mandi")}
-                            </span>
-                            <svg
-                              width="8"
-                              height="8"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#087F63"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="flex-shrink-0"
-                            >
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          </div>
+                          <span
+                            className="text-[11px] font-extrabold text-[#064E3B] truncate"
+                            style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                          >
+                            {attrRateType ? tr(attrRateType) : (lang === "ur" ? "منڈی ریٹ" : "Mandi Rate")}
+                          </span>
+                          <svg
+                            width="8"
+                            height="8"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#087F63"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="flex-shrink-0"
+                          >
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
                         </div>
                       </button>
 
@@ -11723,219 +11718,219 @@ function ProductRatesScreen({
                       </button>
                     </div>
 
-                    {/* BOTTOM SECTION: 5 Attributes (Aligned in matching L-to-R rows with inline arrows) */}
+                    {/* BOTTOM SECTION: 5 Attributes (Balanced 50/50 column grid with aligned rows & chevrons) */}
                     {isAttrPanelOpen && (() => {
                       const hasMoistureData = allRows.some((r) => r.moisture && r.moisture.trim().length > 0) || (attrMoisture !== null);
                       return (
                         <div className="grid grid-cols-2 divide-x divide-[#EEF3F0] pt-2 animate-fadeIn">
                           {/* LEFT COLUMN: Color, Spec, Condition */}
-                          <div className="flex flex-col gap-y-2 pr-2">
-                            {/* ROW 1 LEFT: COLOR */}
+                          <div className="flex flex-col gap-y-1.5 pr-2.5">
+                            {/* ROW 1: COLOR */}
                             <button
                               type="button"
                               onClick={() => setAttrSheet("color")}
-                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
+                              className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
                             >
-                              <div
-                                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                style={{ background: "#E6F8F3", color: "#059669" }}
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-                                </svg>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span
-                                  className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                  style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: "#E6F8F3", color: "#059669" }}
                                 >
-                                  {lang === "ur" ? "رنگ" : "Color"}
-                                </span>
-                                <div className="flex items-center gap-1 mt-0.5">
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+                                  </svg>
+                                </div>
+                                <div className="min-w-0 flex-1 text-left">
                                   <span
-                                    className="font-bold text-[11.5px] leading-tight truncate text-[#059669]"
+                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                  >
+                                    {lang === "ur" ? "رنگ" : "Color"}
+                                  </span>
+                                  <span
+                                    className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#059669]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                                   >
                                     {attrColor ? t(attrColor) : "—"}
                                   </span>
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                    <polyline points="6 9 12 15 18 9" />
-                                  </svg>
                                 </div>
                               </div>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
                             </button>
 
-                            {/* ROW 2 LEFT: SPEC */}
+                            {/* ROW 2: SPEC */}
                             <button
                               type="button"
                               onClick={() => setAttrSheet("spec")}
-                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
+                              className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
                             >
-                              <div
-                                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                style={{ background: "#FEF3C7", color: "#D97706" }}
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-                                </svg>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span
-                                  className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                  style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: "#FEF3C7", color: "#D97706" }}
                                 >
-                                  {lang === "ur" ? "خصوصیت" : "Spec"}
-                                </span>
-                                <div className="flex items-center gap-1 mt-0.5">
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                                  </svg>
+                                </div>
+                                <div className="min-w-0 flex-1 text-left">
                                   <span
-                                    className="font-bold text-[11.5px] leading-tight truncate text-[#92400E]"
+                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                  >
+                                    {lang === "ur" ? "خصوصیت" : "Spec"}
+                                  </span>
+                                  <span
+                                    className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#92400E]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                                   >
                                     {attrSpec ? t(attrSpec) : "—"}
                                   </span>
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                    <polyline points="6 9 12 15 18 9" />
-                                  </svg>
                                 </div>
                               </div>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
                             </button>
 
-                            {/* ROW 3 LEFT: CONDITION (when moisture exists) */}
+                            {/* ROW 3: CONDITION (when moisture exists) */}
                             {hasMoistureData && (
                               <button
                                 type="button"
                                 onClick={() => setAttrSheet("condition")}
-                                className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
+                                className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
                               >
-                                <div
-                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ background: "#CCFBF1", color: "#0D9488" }}
-                                >
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                                  </svg>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <span
-                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <div
+                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{ background: "#CCFBF1", color: "#0D9488" }}
                                   >
-                                    {lang === "ur" ? "حالت" : "Condition"}
-                                  </span>
-                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                                    </svg>
+                                  </div>
+                                  <div className="min-w-0 flex-1 text-left">
                                     <span
-                                      className="font-bold text-[11.5px] leading-tight truncate text-[#065F46]"
+                                      className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                    >
+                                      {lang === "ur" ? "حالت" : "Condition"}
+                                    </span>
+                                    <span
+                                      className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#065F46]"
                                       style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                                     >
                                       {attrCondition ? t(attrCondition) : "—"}
                                     </span>
-                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                      <polyline points="6 9 12 15 18 9" />
-                                    </svg>
                                   </div>
                                 </div>
+                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                  <polyline points="6 9 12 15 18 9" />
+                                </svg>
                               </button>
                             )}
                           </div>
 
                           {/* RIGHT COLUMN: Variety, Quality, Moisture/Condition */}
-                          <div className="flex flex-col gap-y-2 pl-2">
-                            {/* ROW 1 RIGHT: VARIETY */}
+                          <div className="flex flex-col gap-y-1.5 pl-2.5">
+                            {/* ROW 1: VARIETY */}
                             <button
                               type="button"
                               onClick={() => setAttrSheet("variety")}
-                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
+                              className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
                             >
-                              <div
-                                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                style={{ background: "#F3E8FF", color: "#7C3AED" }}
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3 8 0 12-7 12-12zm-3.5 6.5C11 15 9 17 8 19c2.5-3 5-4.5 5.5-4.5z" />
-                                </svg>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span
-                                  className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                  style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: "#F3E8FF", color: "#7C3AED" }}
                                 >
-                                  {lang === "ur" ? "قسم" : "Variety"}
-                                </span>
-                                <div className="flex items-center gap-1 mt-0.5">
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3 8 0 12-7 12-12zm-3.5 6.5C11 15 9 17 8 19c2.5-3 5-4.5 5.5-4.5z" />
+                                  </svg>
+                                </div>
+                                <div className="min-w-0 flex-1 text-left">
                                   <span
-                                    className="font-bold text-[11.5px] leading-tight truncate text-[#6D28D9]"
+                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                  >
+                                    {lang === "ur" ? "قسم" : "Variety"}
+                                  </span>
+                                  <span
+                                    className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#6D28D9]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                                   >
                                     {attrVariety ? tc(attrVariety) : "—"}
                                   </span>
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                    <polyline points="6 9 12 15 18 9" />
-                                  </svg>
                                 </div>
                               </div>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
                             </button>
 
-                            {/* ROW 2 RIGHT: QUALITY (NEW / OLD) */}
+                            {/* ROW 2: QUALITY (NEW / OLD) */}
                             <button
                               type="button"
                               onClick={() => setAttrSheet("newold")}
-                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
+                              className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
                             >
-                              <div
-                                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                style={{ background: "#FFEDD5", color: "#EA580C" }}
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M12 2l2.4 2.8 3.7-.4 1.4 3.4 3.4 1.5-.5 3.7 2.6 2.6-2.6 2.6.5 3.7-3.4 1.5-1.4 3.4-3.7-.4L12 22l-2.4-2.8-3.7.4-1.4-3.4-3.4-1.5.5-3.7L-1 8.4l2.6-2.6-.5-3.7 3.4-1.5 1.4-3.4 3.7.4L12 2z" transform="scale(0.85) translate(2, 2)" />
-                                  <path d="M9.5 10.5h1.2l1.3 2.5V10.5h1v4h-1.1l-1.4-2.7v2.7h-1v-4z" fill="#fff" />
-                                </svg>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span
-                                  className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                  style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: "#FFEDD5", color: "#EA580C" }}
                                 >
-                                  {lang === "ur" ? "معیار" : "Quality"}
-                                </span>
-                                <div className="flex items-center gap-1 mt-0.5">
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2l2.4 2.8 3.7-.4 1.4 3.4 3.4 1.5-.5 3.7 2.6 2.6-2.6 2.6.5 3.7-3.4 1.5-1.4 3.4-3.7-.4L12 22l-2.4-2.8-3.7.4-1.4-3.4-3.4-1.5.5-3.7L-1 8.4l2.6-2.6-.5-3.7 3.4-1.5 1.4-3.4 3.7.4L12 2z" transform="scale(0.85) translate(2, 2)" />
+                                    <path d="M9.5 10.5h1.2l1.3 2.5V10.5h1v4h-1.1l-1.4-2.7v2.7h-1v-4z" fill="#fff" />
+                                  </svg>
+                                </div>
+                                <div className="min-w-0 flex-1 text-left">
                                   <span
-                                    className="font-bold text-[11.5px] leading-tight truncate text-[#C2410C]"
+                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                  >
+                                    {lang === "ur" ? "معیار" : "Quality"}
+                                  </span>
+                                  <span
+                                    className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#C2410C]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                                   >
                                     {attrNewOld ? t(attrNewOld) : "—"}
                                   </span>
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#EA580C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                    <polyline points="6 9 12 15 18 9" />
-                                  </svg>
                                 </div>
                               </div>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#EA580C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
                             </button>
 
-                            {/* ROW 3 RIGHT: MOISTURE or CONDITION */}
+                            {/* ROW 3: MOISTURE or CONDITION */}
                             {hasMoistureData ? (
                               <button
                                 type="button"
                                 onClick={() => setAttrSheet("moisture")}
-                                className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
+                                className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
                               >
-                                <div
-                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ background: "#E0F2FE", color: "#0284C7" }}
-                                >
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                                  </svg>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <span
-                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <div
+                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{ background: "#E0F2FE", color: "#0284C7" }}
                                   >
-                                    {lang === "ur" ? "نمی" : "Moisture"}
-                                  </span>
-                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                                    </svg>
+                                  </div>
+                                  <div className="min-w-0 flex-1 text-left">
                                     <span
-                                      className="font-bold text-[11.5px] leading-tight truncate text-[#0369A1]"
+                                      className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                    >
+                                      {lang === "ur" ? "نمی" : "Moisture"}
+                                    </span>
+                                    <span
+                                      className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#0369A1]"
                                       style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                                     >
                                       {attrMoisture
@@ -11944,45 +11939,45 @@ function ProductRatesScreen({
                                           : `${attrMoisture}${attrMoisture.includes("%") ? "" : "%"}`)
                                         : "—"}
                                     </span>
-                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                      <polyline points="6 9 12 15 18 9" />
-                                    </svg>
                                   </div>
                                 </div>
+                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                  <polyline points="6 9 12 15 18 9" />
+                                </svg>
                               </button>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => setAttrSheet("condition")}
-                                className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
+                                className="tap-target w-full h-[36px] flex items-center justify-between py-1 px-1 rounded-lg transition active:scale-[0.98] hover:bg-[#F8FAF9] group"
                               >
-                                <div
-                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ background: "#CCFBF1", color: "#0D9488" }}
-                                >
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                                  </svg>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <span
-                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <div
+                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{ background: "#CCFBF1", color: "#0D9488" }}
                                   >
-                                    {lang === "ur" ? "حالت" : "Condition"}
-                                  </span>
-                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                                    </svg>
+                                  </div>
+                                  <div className="min-w-0 flex-1 text-left">
                                     <span
-                                      className="font-bold text-[11.5px] leading-tight truncate text-[#065F46]"
+                                      className="text-[8.5px] text-[#6B7280] font-medium block leading-none truncate"
+                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                    >
+                                      {lang === "ur" ? "حالت" : "Condition"}
+                                    </span>
+                                    <span
+                                      className="font-bold text-[11.5px] leading-tight truncate block mt-0.5 text-[#065F46]"
                                       style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                                     >
                                       {attrCondition ? t(attrCondition) : "—"}
                                     </span>
-                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                      <polyline points="6 9 12 15 18 9" />
-                                    </svg>
                                   </div>
                                 </div>
+                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 opacity-70 group-hover:opacity-100">
+                                  <polyline points="6 9 12 15 18 9" />
+                                </svg>
                               </button>
                             )}
                           </div>
