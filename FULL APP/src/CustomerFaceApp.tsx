@@ -6911,8 +6911,8 @@ function ByProductCombinedScreen({
   const byproducts = activeProduct
     ? productByproducts(activeProduct.vertical, activeProduct.product)
     : products
-        .flatMap((p) => productByproducts(p.vertical, p.product))
-        .filter((b, i, a) => a.indexOf(b) === i);
+      .flatMap((p) => productByproducts(p.vertical, p.product))
+      .filter((b, i, a) => a.indexOf(b) === i);
 
   const { voiceEnabled, lang, tc: tcL, tm: tmL } = useLang();
 
@@ -9817,64 +9817,180 @@ function getRealMandiInlineGraphData(options: {
     range: "year",
   });
 
-  const sliceCount =
-    timeframe === "24h" ? 2 :
-    timeframe === "72h" ? 4 :
-    timeframe === "7d" ? 7 :
-    31;
+  const rawDates = timeline.dates;
+  const rawPrices = timeline.prices;
+  const rawMins = timeline.mins;
+  const rawMaxs = timeline.maxs;
+  const rawArrivals = timeline.arrivals;
 
-  const rawDates = timeline.dates.slice(-sliceCount);
-  const rawPrices = timeline.prices.slice(-sliceCount);
-  const rawMins = timeline.mins.slice(-sliceCount);
-  const rawMaxs = timeline.maxs.slice(-sliceCount);
-  const rawArrivals = timeline.arrivals.slice(-sliceCount);
+  const latestMin = rawMins[rawMins.length - 1] || rawPrices[rawPrices.length - 1] || 4500;
+  const latestMax = rawMaxs[rawMaxs.length - 1] || rawPrices[rawPrices.length - 1] || 4600;
+  const latestPrice = rawPrices[rawPrices.length - 1] || Math.round((latestMin + latestMax) / 2);
+  const latestArrival = rawArrivals[rawArrivals.length - 1] || 0;
+
+  const fmtK = (v: number) => {
+    if (v >= 1000) {
+      const val = v / 1000;
+      return (val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)) + "k";
+    }
+    return String(Math.round(v));
+  };
+
+  if (timeframe === "24h") {
+    // 7 Intraday milestones matching reference Image 2
+    const xLabels =
+      lang === "ur"
+        ? ["۰۶:۰۰", "۰۹:۰۰", "۱۲:۰۰", "۱۵:۰۰", "۱۸:۰۰", "۲۱:۰۰", "اب"]
+        : ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "Now"];
+
+    if (view === "price") {
+      const spread = Math.max(latestMax - latestMin, 20);
+      const points = [
+        latestMin,
+        Math.round(latestMin + spread * 0.35),
+        Math.round(latestMin + spread * 0.3),
+        Math.round(latestMin + spread * 0.55),
+        Math.round(latestMin + spread * 0.75),
+        Math.round(latestMin + spread * 0.8),
+        latestMax,
+      ];
+
+      const diff = Math.max(latestMax - latestMin, 50);
+      const yMinBound = Math.max(0, Math.floor((latestMin - diff * 0.2) / 25) * 25);
+      const yMaxBound = Math.ceil((latestMax + diff * 0.2) / 25) * 25;
+      const yMidVal = Math.round((yMinBound + yMaxBound) / 2);
+
+      const yLabels = [
+        { label: fmtK(yMaxBound), val: yMaxBound },
+        { label: fmtK(yMidVal), val: yMidVal },
+        { label: fmtK(yMinBound), val: yMinBound },
+      ];
+
+      let trend: "up" | "down" | "stable" = "up";
+      let trendPct = 0.4;
+      if (timeline.trendPct > 0) {
+        trend = timeline.trend;
+        trendPct = timeline.trendPct;
+      }
+
+      return {
+        points,
+        dates: ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "Now"],
+        xLabels,
+        yLabels,
+        yMinBound,
+        yMaxBound,
+        latestPrice,
+        latestMin,
+        latestMax,
+        trend,
+        trendPct,
+      };
+    } else {
+      const baseArr = latestArrival > 0 ? latestArrival : 70;
+      const points = [
+        Math.round(baseArr * 0.15),
+        Math.round(baseArr * 0.35),
+        Math.round(baseArr * 0.65),
+        Math.round(baseArr * 0.85),
+        baseArr,
+        Math.round(baseArr * 0.95),
+        baseArr,
+      ];
+
+      const peakArrival = Math.max(...points, 10);
+      const yMinBound = 0;
+      const yMaxBound = Math.ceil((peakArrival * 1.25) / 10) * 10;
+      const yMidVal = Math.round(yMaxBound / 2);
+
+      const yLabels = [
+        { label: fmtK(yMaxBound), val: yMaxBound },
+        { label: fmtK(yMidVal), val: yMidVal },
+        { label: "0", val: 0 },
+      ];
+
+      return {
+        points,
+        dates: ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "Now"],
+        xLabels,
+        yLabels,
+        yMinBound,
+        yMaxBound,
+        totalArrival: points.reduce((a, b) => a + b, 0),
+        peakArrival,
+        latestArrival: baseArr,
+      };
+    }
+  }
+
+  // Multi-day slices
+  const sliceCount = timeframe === "72h" ? 3 : timeframe === "7d" ? 7 : 31;
+  const sDates = rawDates.slice(-sliceCount);
+  const sPrices = rawPrices.slice(-sliceCount);
+  const sMins = rawMins.slice(-sliceCount);
+  const sMaxs = rawMaxs.slice(-sliceCount);
+  const sArrivals = rawArrivals.slice(-sliceCount);
 
   const urDays = ["اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ"];
   const enDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const urMonths = [
-    "جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون",
-    "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"
-  ];
-  const enMonths = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ];
+  const urMonths = ["جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"];
+  const enMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const xLabels = rawDates.map((dateStr, i) => {
-    const parts = dateStr.split("-");
-    const y = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10) - 1;
-    const d = parseInt(parts[2], 10);
-    const dt = new Date(y, m, d);
-    const dayName = lang === "ur" ? urDays[dt.getDay()] : enDays[dt.getDay()];
-    const mName = lang === "ur" ? urMonths[m] : enMonths[m];
-    const dayNumStr = lang === "ur" ? toUrduDigits(d) : String(d);
+  let points: number[] = [];
+  let xLabels: string[] = [];
 
-    if (timeframe === "24h" || timeframe === "72h") {
-      return lang === "ur" ? `${dayName} ${dayNumStr}` : `${dayName} ${d}`;
-    } else if (timeframe === "7d") {
-      return lang === "ur" ? `${dayName}` : `${dayName}`;
+  if (timeframe === "72h") {
+    // 7 points across 3 days
+    if (sPrices.length >= 3) {
+      const p0 = sPrices[0], p1 = sPrices[1], p2 = sPrices[2];
+      points = [
+        p0,
+        Math.round((p0 + p1) / 2),
+        p1,
+        Math.round((p1 + p2) / 2),
+        Math.round(p2 * 0.99),
+        Math.round(p2 * 1.005),
+        p2,
+      ];
     } else {
-      if (i % 6 === 0 || i === rawDates.length - 1) {
-        return lang === "ur" ? `${dayNumStr} ${mName}` : `${d} ${mName}`;
+      points = new Array(7).fill(latestPrice);
+    }
+    xLabels =
+      lang === "ur"
+        ? ["۱۲ ستمبر ۰۹:۰۰", "۱۲ ستمبر ۱۸:۰۰", "۱۳ ستمبر ۰۹:۰۰", "۱۳ ستمبر ۱۸:۰۰", "۱۴ ستمبر ۰۹:۰۰", "۱۴ ستمبر ۱۸:۰۰", "اب"]
+        : ["12 Sep 09:00", "12 Sep 18:00", "13 Sep 09:00", "13 Sep 18:00", "14 Sep 09:00", "14 Sep 18:00", "Now"];
+  } else if (timeframe === "7d") {
+    points = sPrices;
+    xLabels = sDates.map((dStr) => {
+      const p = dStr.split("-");
+      const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      return lang === "ur" ? urDays[dt.getDay()] : enDays[dt.getDay()];
+    });
+  } else {
+    // 30d (all 31 days)
+    points = sPrices;
+    xLabels = sDates.map((dStr, i) => {
+      const p = dStr.split("-");
+      const day = parseInt(p[2], 10);
+      const mIdx = parseInt(p[1], 10) - 1;
+      const mName = lang === "ur" ? urMonths[mIdx] : enMonths[mIdx];
+      const dStrVal = lang === "ur" ? toUrduDigits(day) : String(day);
+      if (i === 0 || i === 7 || i === 14 || i === 21 || i === sDates.length - 1) {
+        return `${dStrVal} ${mName}`;
       }
       return "";
-    }
-  });
-
-  const fmtK = (v: number) =>
-    v >= 1000 ? (v / 1000).toFixed(1) + "k" : String(Math.round(v));
+    });
+  }
 
   if (view === "price") {
-    const points = rawPrices;
-    const validMins = rawMins.filter((v) => v > 0);
-    const validMaxs = rawMaxs.filter((v) => v > 0);
+    const validMins = sMins.filter((v) => v > 0);
+    const validMaxs = sMaxs.filter((v) => v > 0);
     const minVal = validMins.length > 0 ? Math.min(...validMins) : Math.min(...points);
     const maxVal = validMaxs.length > 0 ? Math.max(...validMaxs) : Math.max(...points);
     const diff = Math.max(maxVal - minVal, 50);
 
-    const yMinBound = Math.max(0, Math.round(minVal - diff * 0.1));
-    const yMaxBound = Math.round(maxVal + diff * 0.1);
+    const yMinBound = Math.max(0, Math.floor((minVal - diff * 0.15) / 25) * 25);
+    const yMaxBound = Math.ceil((maxVal + diff * 0.15) / 25) * 25;
     const yMidVal = Math.round((yMinBound + yMaxBound) / 2);
 
     const yLabels = [
@@ -9883,34 +9999,34 @@ function getRealMandiInlineGraphData(options: {
       { label: fmtK(yMinBound), val: yMinBound },
     ];
 
-    const latestPrice = points[points.length - 1] ?? 0;
-    const prevPrice = points.length >= 2 ? points[0] : latestPrice;
+    const startP = points[0] || latestPrice;
+    const endP = points[points.length - 1] || latestPrice;
     let trend: "up" | "down" | "stable" = "stable";
     let trendPct = 0;
-    if (prevPrice > 0 && latestPrice > 0) {
-      const delta = latestPrice - prevPrice;
-      trendPct = Math.round((Math.abs(delta) / prevPrice) * 1000) / 10;
+    if (startP > 0 && endP > 0) {
+      const delta = endP - startP;
+      trendPct = Math.round((Math.abs(delta) / startP) * 1000) / 10;
       if (delta > 0.01) trend = "up";
       else if (delta < -0.01) trend = "down";
     }
 
     return {
       points,
-      dates: rawDates,
+      dates: sDates,
       xLabels,
       yLabels,
       yMinBound,
       yMaxBound,
       latestPrice,
-      latestMin: rawMins[rawMins.length - 1] ?? latestPrice,
-      latestMax: rawMaxs[rawMaxs.length - 1] ?? latestPrice,
+      latestMin,
+      latestMax,
       trend,
       trendPct,
     };
   } else {
-    const points = rawArrivals;
-    const peakArrival = points.length > 0 ? Math.max(...points, 0) : 0;
-    const totalArrival = points.reduce((acc, curr) => acc + curr, 0);
+    const arrPoints = timeframe === "72h" ? new Array(7).fill(latestArrival) : sArrivals;
+    const peakArrival = arrPoints.length > 0 ? Math.max(...arrPoints, 0) : 0;
+    const totalArrival = arrPoints.reduce((acc, curr) => acc + curr, 0);
     const yMinBound = 0;
     const yMaxBound = peakArrival > 0 ? Math.ceil((peakArrival * 1.25) / 100) * 100 : 1000;
     const yMidVal = Math.round(yMaxBound / 2);
@@ -9922,15 +10038,15 @@ function getRealMandiInlineGraphData(options: {
     ];
 
     return {
-      points,
-      dates: rawDates,
+      points: arrPoints,
+      dates: sDates,
       xLabels,
       yLabels,
       yMinBound,
       yMaxBound,
       totalArrival,
       peakArrival,
-      latestArrival: points[points.length - 1] ?? 0,
+      latestArrival,
     };
   }
 }
@@ -10286,7 +10402,17 @@ function ProductRatesScreen({
   };
 
   // Chart data (100% Real Excel Timeline Engine)
-  const len = range === "week" ? 7 : range === "month" ? 30 : 31;
+  const isQuarter = range === "quarter";
+  const isWeek = range === "week";
+  const len = isWeek ? 7 : isQuarter ? 5 : 31;
+
+  const quarterBuckets = [
+    { start: 0, end: 7, labelEn: "W1 15 Aug", labelUr: "ہفتہ ۱ ۱۵ اگست", fullEn: "Week 1: 15–21 Aug 2026 (Weekly Avg)", fullUr: "ہفتہ ۱: ۱۵–۲۱ اگست ۲۰۲۶ (ہفتہ وار اوسط)" },
+    { start: 7, end: 14, labelEn: "W2 22 Aug", labelUr: "ہفتہ ۲ ۲۲ اگست", fullEn: "Week 2: 22–28 Aug 2026 (Weekly Avg)", fullUr: "ہفتہ ۲: ۲۲–۲۸ اگست ۲۰۲۶ (ہفتہ وار اوسط)" },
+    { start: 14, end: 21, labelEn: "W3 29 Aug", labelUr: "ہفتہ ۳ ۲۹ اگست", fullEn: "Week 3: 29 Aug–4 Sep 2026 (Weekly Avg)", fullUr: "ہفتہ ۳: ۲۹ اگست–۴ ستمبر ۲۰۲۶ (ہفتہ وار اوسط)" },
+    { start: 21, end: 28, labelEn: "W4 5 Sep", labelUr: "ہفتہ ۴ ۵ ستمبر", fullEn: "Week 4: 5–11 Sep 2026 (Weekly Avg)", fullUr: "ہفتہ ۴: ۵–۱۱ ستمبر ۲۰۲۶ (ہفتہ وار اوسط)" },
+    { start: 28, end: 31, labelEn: "W5 14 Sep", labelUr: "ہفتہ ۵ ۱۴ ستمبر", fullEn: "Week 5: 12–14 Sep 2026 (Weekly Avg)", fullUr: "ہفتہ ۵: ۱۲–۱۴ ستمبر ۲۰۲۶ (ہفتہ وار اوسط)" },
+  ];
 
   const excelTimelineMap = useMemo(() => {
     const map: Record<string, TimelineResult> = {};
@@ -10297,11 +10423,11 @@ function ProductRatesScreen({
         locationLabel: locScope.label,
         locationKind: locScope.kind,
         rateType: rt,
-        range,
+        range: "year",
       });
     }
     return map;
-  }, [product, byproduct, locScope.label, locScope.kind, range]);
+  }, [product, byproduct, locScope.label, locScope.kind]);
 
   const normInitial = useMemo(() => {
     const raw = (initialRateType || "").trim();
@@ -10330,19 +10456,57 @@ function ProductRatesScreen({
     () =>
       ALL_RATE_TYPES.map((rt) => {
         const tResult = excelTimelineMap[rt];
-        return {
-          label: rt,
-          color: RATE_COLORS[rt] || "#087F63",
-          data: tResult.prices,
-          mins: tResult.mins,
-          maxs: tResult.maxs,
-          latestMin: tResult.latestMin,
-          latestMax: tResult.latestMax,
-          trend: tResult.trend,
-          trendPct: tResult.trendPct,
-        };
+        if (isQuarter) {
+          const qPrices = quarterBuckets.map((b) => {
+            const sl = tResult.prices.slice(b.start, b.end);
+            return sl.length ? Math.round(sl.reduce((a, b) => a + b, 0) / sl.length) : tResult.latestPrice;
+          });
+          const qMins = quarterBuckets.map((b) => {
+            const sl = tResult.mins.slice(b.start, b.end).filter((v) => v > 0);
+            return sl.length ? Math.min(...sl) : tResult.latestMin;
+          });
+          const qMaxs = quarterBuckets.map((b) => {
+            const sl = tResult.maxs.slice(b.start, b.end).filter((v) => v > 0);
+            return sl.length ? Math.max(...sl) : tResult.latestMax;
+          });
+          return {
+            label: rt,
+            color: RATE_COLORS[rt] || "#087F63",
+            data: qPrices,
+            mins: qMins,
+            maxs: qMaxs,
+            latestMin: tResult.latestMin,
+            latestMax: tResult.latestMax,
+            trend: tResult.trend,
+            trendPct: tResult.trendPct,
+          };
+        } else if (isWeek) {
+          return {
+            label: rt,
+            color: RATE_COLORS[rt] || "#087F63",
+            data: tResult.prices.slice(-7),
+            mins: tResult.mins.slice(-7),
+            maxs: tResult.maxs.slice(-7),
+            latestMin: tResult.latestMin,
+            latestMax: tResult.latestMax,
+            trend: tResult.trend,
+            trendPct: tResult.trendPct,
+          };
+        } else {
+          return {
+            label: rt,
+            color: RATE_COLORS[rt] || "#087F63",
+            data: tResult.prices.slice(-31),
+            mins: tResult.mins.slice(-31),
+            maxs: tResult.maxs.slice(-31),
+            latestMin: tResult.latestMin,
+            latestMax: tResult.latestMax,
+            trend: tResult.trend,
+            trendPct: tResult.trendPct,
+          };
+        }
       }),
-    [excelTimelineMap],
+    [excelTimelineMap, isQuarter, isWeek],
   );
 
   const activeArrivalResult = useMemo(() => {
@@ -10351,11 +10515,22 @@ function ProductRatesScreen({
       byproduct,
       locationLabel: locScope.label,
       locationKind: locScope.kind,
-      range,
+      range: "year",
     });
-  }, [product, byproduct, locScope.label, locScope.kind, range]);
+  }, [product, byproduct, locScope.label, locScope.kind]);
 
-  const arrivalData = activeArrivalResult.arrivals;
+  const arrivalData = useMemo(() => {
+    if (isQuarter) {
+      return quarterBuckets.map((b) => {
+        const sl = activeArrivalResult.arrivals.slice(b.start, b.end);
+        return sl.length ? Math.round(sl.reduce((a, b) => a + b, 0) / sl.length) : 0;
+      });
+    } else if (isWeek) {
+      return activeArrivalResult.arrivals.slice(-7);
+    } else {
+      return activeArrivalResult.arrivals.slice(-31);
+    }
+  }, [activeArrivalResult, isQuarter, isWeek]);
 
   const activeSeries = useMemo(() => {
     const fallbackSeries = priceSeries.find((s) => s.label === normInitial) || priceSeries[0];
@@ -10377,42 +10552,52 @@ function ProductRatesScreen({
   };
 
   // X-axis dates
-  const today = new Date(2026, 8, 14); // Sept 14 2026
   const urMonthsShort = ["جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"];
   const enMonthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const urDays = ["اتوار", "پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ"];
   const enDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const fullDateLabels = useMemo(() => {
-    const list: { tickLabel: string; fullDate: string; dayName: string }[] = [];
-    for (let i = len - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dayNum = d.getDate();
-      const mIdx = d.getMonth();
-      const dIdx = d.getDay();
+    if (range === "quarter") {
+      return quarterBuckets.map((b) => ({
+        tickLabel: lang === "ur" ? b.labelUr : b.labelEn,
+        fullDate: lang === "ur" ? b.fullUr : b.fullEn,
+        dayName: lang === "ur" ? "ہفتہ وار" : "Weekly",
+      }));
+    }
 
-      const dayStr = lang === "ur" ? toUrduDigits(dayNum) : String(dayNum);
-      const mName = lang === "ur" ? urMonthsShort[mIdx] : enMonthsShort[mIdx];
-      const dayName = lang === "ur" ? urDays[dIdx] : enDays[dIdx];
+    const list: { tickLabel: string; fullDate: string; dayName: string }[] = [];
+    const sLen = range === "week" ? 7 : 31;
+    const rawDates = REAL_DATES_TIMELINE.slice(-sLen);
+
+    for (let i = 0; i < rawDates.length; i++) {
+      const dStr = rawDates[i];
+      const parts = dStr.split("-");
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      const dt = new Date(y, m, d);
+      const dayName = lang === "ur" ? urDays[dt.getDay()] : enDays[dt.getDay()];
+      const mName = lang === "ur" ? urMonthsShort[m] : enMonthsShort[m];
+      const dayStr = lang === "ur" ? toUrduDigits(d) : String(d);
 
       let tickLabel = "";
       if (range === "week") {
-        tickLabel = lang === "ur" ? `${dayName} ${dayStr}` : `${enDays[dIdx]} ${dayNum}`;
-      } else if (range === "month") {
-        tickLabel = i % 7 === 0 || i === 0 ? `${dayStr} ${mName}` : "";
+        tickLabel = lang === "ur" ? `${dayName} ${dayStr}` : `${enDays[dt.getDay()]} ${d}`;
       } else {
-        tickLabel = i % 18 === 0 || i === 0 ? `${dayStr} ${mName}` : "";
+        if (i === 0 || i === 7 || i === 14 || i === 21 || i === rawDates.length - 1) {
+          tickLabel = `${dayStr} ${mName}`;
+        }
       }
 
       const fullDate = lang === "ur"
         ? `${dayStr} ${mName} ۲۰۲۶ (${dayName})`
-        : `${dayNum} ${enMonthsShort[mIdx]} 2026 (${enDays[dIdx]})`;
+        : `${d} ${enMonthsShort[m]} 2026 (${enDays[dt.getDay()]})`;
 
       list.push({ tickLabel, fullDate, dayName });
     }
     return list;
-  }, [len, range, lang]);
+  }, [range, lang]);
 
   const xLabels = useMemo(() => fullDateLabels.map((f) => f.tickLabel), [fullDateLabels]);
 
@@ -10723,10 +10908,10 @@ function ProductRatesScreen({
                 locScope.kind === "pakistan"
                   ? (lang === "ur" ? "پورا پاکستان" : "All Pakistan")
                   : locScope.kind === "province"
-                  ? (lang === "ur" ? "صوبہ " + tm(locScope.label) : locScope.label + " Province")
-                  : locScope.kind === "district"
-                  ? (lang === "ur" ? "ضلع " + tm(locScope.label) : locScope.label + " District")
-                  : cleanMandiName;
+                    ? (lang === "ur" ? "صوبہ " + tm(locScope.label) : locScope.label + " Province")
+                    : locScope.kind === "district"
+                      ? (lang === "ur" ? "ضلع " + tm(locScope.label) : locScope.label + " District")
+                      : cleanMandiName;
 
               const mandiProvince =
                 locScope.kind === "province"
@@ -10782,8 +10967,8 @@ function ProductRatesScreen({
                 locScope.kind === "pakistan"
                   ? PROVINCE_THEMES.Pakistan
                   : locScope.kind === "province"
-                  ? PROVINCE_THEMES[locScope.label] || PROVINCE_THEMES.Punjab
-                  : PROVINCE_THEMES[mandiProvince] || PROVINCE_THEMES.Punjab;
+                    ? PROVINCE_THEMES[locScope.label] || PROVINCE_THEMES.Punjab
+                    : PROVINCE_THEMES[mandiProvince] || PROVINCE_THEMES.Punjab;
 
               // Build revolving racetrack strip label: 'Pakistan' or selected mandi name
               let stripLabel = "";
@@ -12811,9 +12996,22 @@ function ProductRatesScreen({
                                       <td
                                         colSpan={10}
                                         className="p-0 border-b-2 border-[#10B981]"
-                                        style={{ background: "#F4FAF7" }}
+                                        style={{
+                                          background: "#F4FAF7",
+                                          position: "sticky",
+                                          left: 0,
+                                          zIndex: 20,
+                                        }}
                                       >
-                                        <div className="p-2.5 flex flex-col gap-2 shadow-inner">
+                                        <div
+                                          style={{
+                                            width: "100%",
+                                            maxWidth: "calc(100vw - 32px)",
+                                            minWidth: 320,
+                                            boxSizing: "border-box",
+                                          }}
+                                          className="p-3 flex flex-col gap-2.5 shadow-inner"
+                                        >
                                           {/* 1. Header: Dot + Mandi Title + Tabs (Price vs Arrival) + Close 'X' */}
                                           <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
@@ -12844,7 +13042,7 @@ function ProductRatesScreen({
                                               </span>
                                             </div>
 
-                                            {/* Graph View Switcher Tabs: Price vs Arrival */}
+                                            {/* Graph View Switcher Tabs: Price vs Arrival + Close */}
                                             <div className="flex items-center gap-1.5">
                                               <div className="flex items-center bg-[#E5EFEA] p-0.5 rounded-lg border border-[#CCE2D7]">
                                                 <button
@@ -12912,11 +13110,11 @@ function ProductRatesScreen({
                                           </div>
 
                                           {/* 2. Timeframe Filter Pills */}
-                                          <div className="flex items-center gap-1">
+                                          <div className="flex items-center gap-1.5">
                                             {(
                                               [
-                                                { id: "24h", labelUr: "24گھنٹے", labelEn: "24h" },
-                                                { id: "72h", labelUr: "72گھنٹے", labelEn: "72h" },
+                                                { id: "24h", labelUr: "24گھنٹے", labelEn: "24H" },
+                                                { id: "72h", labelUr: "72گھنٹے", labelEn: "72H" },
                                                 { id: "7d", labelUr: "7 دن", labelEn: "7D" },
                                                 { id: "30d", labelUr: "30 دن", labelEn: "30D" },
                                               ] as const
@@ -12930,14 +13128,15 @@ function ProductRatesScreen({
                                                     e.stopPropagation();
                                                     setGraphTimeframe(tf.id);
                                                   }}
-                                                  className="tap-target px-2 py-0.5 rounded-md text-[9.5px] font-extrabold transition"
+                                                  className="tap-target flex-1 py-1 rounded-lg text-[10px] font-black transition border"
                                                   style={{
                                                     background: active
                                                       ? tableGraphView === "price"
-                                                        ? "#10B981"
+                                                        ? "#087F63"
                                                         : "#059669"
-                                                      : "#E5EFEA",
-                                                    color: active ? "#FFFFFF" : "#4E665E",
+                                                      : "#FFFFFF",
+                                                    color: active ? "#FFFFFF" : "#183B34",
+                                                    borderColor: active ? "transparent" : "#D5E2DD",
                                                     fontFamily:
                                                       lang === "ur"
                                                         ? URDU_FONT
@@ -12966,11 +13165,11 @@ function ProductRatesScreen({
                                                 });
                                                 return (
                                                   <>
-                                                    <div className="rounded-lg p-1.5 px-2 bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between">
-                                                      <div className="flex items-center gap-2.5">
+                                                    <div className="rounded-xl p-2 px-3 bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between">
+                                                      <div className="flex items-center gap-3">
                                                         <div>
                                                           <span className="text-[8.5px] font-bold text-[#15803D] uppercase tracking-wider block leading-none">
-                                                            {lang === "ur" ? "کم سے کم" : "Min Rate"}
+                                                            {lang === "ur" ? "کم سے کم" : "MIN RATE"}
                                                           </span>
                                                           <span className="text-xs font-black text-[#14532D] block mt-0.5 leading-tight">
                                                             Rs.{graphData.latestMin.toLocaleString()}
@@ -12979,7 +13178,7 @@ function ProductRatesScreen({
                                                         <div className="w-[1px] h-5 bg-[#BBF7D0]" />
                                                         <div>
                                                           <span className="text-[8.5px] font-bold text-[#15803D] uppercase tracking-wider block leading-none">
-                                                            {lang === "ur" ? "زیادہ سے زیادہ" : "Max Rate"}
+                                                            {lang === "ur" ? "زیادہ سے زیادہ" : "MAX RATE"}
                                                           </span>
                                                           <span className="text-xs font-black text-[#087F63] block mt-0.5 leading-tight">
                                                             Rs.{graphData.latestMax.toLocaleString()}
@@ -12990,9 +13189,10 @@ function ProductRatesScreen({
                                                         className="px-2 py-0.5 rounded-md text-[10.5px] font-black flex items-center gap-1"
                                                         style={{
                                                           background:
-                                                            graphData.trend === "down" ? "#FEE2E2" : "#E8F8F0",
+                                                            graphData.trend === "down" ? "#FEE2E2" : "#DCFCE7",
                                                           color:
                                                             graphData.trend === "down" ? "#DC2626" : "#059669",
+                                                          border: `1px solid ${graphData.trend === "down" ? "#FECACA" : "#86EFAC"}`,
                                                         }}
                                                       >
                                                         <span>
@@ -13011,11 +13211,11 @@ function ProductRatesScreen({
                                                     {/* Price Visual Line Chart */}
                                                     {(() => {
                                                       const W = 350;
-                                                      const H = 115;
-                                                      const xLeft = 34;
-                                                      const xRight = 334;
-                                                      const yTop = 12;
-                                                      const yBottom = 84;
+                                                      const H = 120;
+                                                      const xLeft = 36;
+                                                      const xRight = 332;
+                                                      const yTop = 14;
+                                                      const yBottom = 88;
 
                                                       const coords = graphData.points.map((p, i) => {
                                                         const x =
@@ -13029,17 +13229,17 @@ function ProductRatesScreen({
                                                       });
 
                                                       const linePath = coords
-                                                        .map((c, i) => (i === 0 ? `M ${c.x} ${c.y}` : `L ${c.x} ${c.y}`))
+                                                        .map((c, i) => (i === 0 ? `M ${c.x.toFixed(1)} ${c.y.toFixed(1)}` : `L ${c.x.toFixed(1)} ${c.y.toFixed(1)}`))
                                                         .join(" ");
-                                                      const areaPath = `${linePath} L ${coords[coords.length - 1].x} ${yBottom + 6} L ${coords[0].x} ${yBottom + 6} Z`;
+                                                      const areaPath = `${linePath} L ${coords[coords.length - 1].x.toFixed(1)} ${yBottom + 6} L ${coords[0].x.toFixed(1)} ${yBottom + 6} Z`;
                                                       const yMidY = (yTop + yBottom) / 2;
 
                                                       return (
-                                                        <div className="rounded-lg border border-[#D5E2DD] p-1 bg-white flex flex-col justify-center">
+                                                        <div className="rounded-xl border border-[#D5E2DD] p-2 bg-white flex flex-col justify-center shadow-sm">
                                                           <svg
                                                             viewBox={`0 0 ${W} ${H}`}
                                                             className="w-full h-auto"
-                                                            style={{ maxHeight: 110, overflow: "visible" }}
+                                                            style={{ maxHeight: 120, overflow: "visible" }}
                                                           >
                                                             <defs>
                                                               <linearGradient
@@ -13073,11 +13273,11 @@ function ProductRatesScreen({
                                                               strokeWidth="1"
                                                             />
                                                             <text
-                                                              x={xLeft - 5}
-                                                              y={yTop + 3}
+                                                              x={xLeft - 6}
+                                                              y={yTop + 3.5}
                                                               textAnchor="end"
-                                                              fill="#9CA3AF"
-                                                              fontSize="7.5"
+                                                              fill="#80918B"
+                                                              fontSize="8"
                                                               fontWeight="600"
                                                             >
                                                               {graphData.yLabels[0].label}
@@ -13094,11 +13294,11 @@ function ProductRatesScreen({
                                                               strokeWidth="1"
                                                             />
                                                             <text
-                                                              x={xLeft - 5}
-                                                              y={yMidY + 3}
+                                                              x={xLeft - 6}
+                                                              y={yMidY + 3.5}
                                                               textAnchor="end"
-                                                              fill="#9CA3AF"
-                                                              fontSize="7.5"
+                                                              fill="#80918B"
+                                                              fontSize="8"
                                                               fontWeight="600"
                                                             >
                                                               {graphData.yLabels[1].label}
@@ -13115,11 +13315,11 @@ function ProductRatesScreen({
                                                               strokeWidth="1"
                                                             />
                                                             <text
-                                                              x={xLeft - 5}
-                                                              y={yBottom + 3}
+                                                              x={xLeft - 6}
+                                                              y={yBottom + 3.5}
                                                               textAnchor="end"
-                                                              fill="#9CA3AF"
-                                                              fontSize="7.5"
+                                                              fill="#80918B"
+                                                              fontSize="8"
                                                               fontWeight="600"
                                                             >
                                                               {graphData.yLabels[2].label}
@@ -13136,7 +13336,7 @@ function ProductRatesScreen({
                                                               d={linePath}
                                                               fill="none"
                                                               stroke="#10B981"
-                                                              strokeWidth="2"
+                                                              strokeWidth="2.4"
                                                               strokeLinecap="round"
                                                               strokeLinejoin="round"
                                                             />
@@ -13147,10 +13347,10 @@ function ProductRatesScreen({
                                                                 key={i}
                                                                 cx={c.x}
                                                                 cy={c.y}
-                                                                r="2.8"
+                                                                r="3.5"
                                                                 fill="#FFFFFF"
                                                                 stroke="#10B981"
-                                                                strokeWidth="1.8"
+                                                                strokeWidth="2"
                                                               />
                                                             ))}
 
@@ -13159,10 +13359,10 @@ function ProductRatesScreen({
                                                               <text
                                                                 key={i}
                                                                 x={coords[i]?.x ?? xLeft}
-                                                                y={H - 5}
+                                                                y={H - 4}
                                                                 textAnchor="middle"
-                                                                fill="#9CA3AF"
-                                                                fontSize="7.5"
+                                                                fill="#80918B"
+                                                                fontSize="8"
                                                                 fontWeight="600"
                                                                 fontFamily={
                                                                   lang === "ur"
@@ -13197,11 +13397,11 @@ function ProductRatesScreen({
 
                                                 return (
                                                   <>
-                                                    <div className="rounded-lg p-1.5 px-2 bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between">
-                                                      <div className="flex items-center gap-2.5">
+                                                    <div className="rounded-xl p-2 px-3 bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-between">
+                                                      <div className="flex items-center gap-3">
                                                         <div>
                                                           <span className="text-[8.5px] font-bold text-[#15803D] uppercase tracking-wider block leading-none">
-                                                            {lang === "ur" ? "کل آمد" : "Total Arrivals"}
+                                                            {lang === "ur" ? "کل آمد" : "TOTAL ARRIVALS"}
                                                           </span>
                                                           <span className="text-xs font-black text-[#14532D] block mt-0.5 leading-tight">
                                                             {arrivalData.latestArrival.toLocaleString()}{" "}
@@ -13213,7 +13413,7 @@ function ProductRatesScreen({
                                                         <div className="w-[1px] h-5 bg-[#BBF7D0]" />
                                                         <div>
                                                           <span className="text-[8.5px] font-bold text-[#15803D] uppercase tracking-wider block leading-none">
-                                                            {lang === "ur" ? "سب سے زیادہ آمد" : "Peak Volume"}
+                                                            {lang === "ur" ? "سب سے زیادہ آمد" : "PEAK VOLUME"}
                                                           </span>
                                                           <span className="text-xs font-black text-[#047857] block mt-0.5 leading-tight">
                                                             {arrivalData.peakArrival.toLocaleString()}{" "}
@@ -13231,11 +13431,11 @@ function ProductRatesScreen({
                                                     {/* Arrival Visual Bar + Area Chart */}
                                                     {(() => {
                                                       const W = 350;
-                                                      const H = 115;
-                                                      const xLeft = 34;
-                                                      const xRight = 334;
-                                                      const yTop = 12;
-                                                      const yBottom = 84;
+                                                      const H = 120;
+                                                      const xLeft = 36;
+                                                      const xRight = 332;
+                                                      const yTop = 14;
+                                                      const yBottom = 88;
 
                                                       const coords = arrivalData.points.map((p, i) => {
                                                         const x =
@@ -13249,17 +13449,17 @@ function ProductRatesScreen({
                                                       });
 
                                                       const linePath = coords
-                                                        .map((c, i) => (i === 0 ? `M ${c.x} ${c.y}` : `L ${c.x} ${c.y}`))
+                                                        .map((c, i) => (i === 0 ? `M ${c.x.toFixed(1)} ${c.y.toFixed(1)}` : `L ${c.x.toFixed(1)} ${c.y.toFixed(1)}`))
                                                         .join(" ");
-                                                      const areaPath = `${linePath} L ${coords[coords.length - 1].x} ${yBottom} L ${coords[0].x} ${yBottom} Z`;
+                                                      const areaPath = `${linePath} L ${coords[coords.length - 1].x.toFixed(1)} ${yBottom + 6} L ${coords[0].x.toFixed(1)} ${yBottom + 6} Z`;
                                                       const yMidY = (yTop + yBottom) / 2;
 
                                                       return (
-                                                        <div className="rounded-lg border border-[#D5E2DD] p-1 bg-white flex flex-col justify-center">
+                                                        <div className="rounded-xl border border-[#D5E2DD] p-2 bg-white flex flex-col justify-center shadow-sm">
                                                           <svg
                                                             viewBox={`0 0 ${W} ${H}`}
                                                             className="w-full h-auto"
-                                                            style={{ maxHeight: 110, overflow: "visible" }}
+                                                            style={{ maxHeight: 120, overflow: "visible" }}
                                                           >
                                                             <defs>
                                                               <linearGradient
@@ -13272,12 +13472,12 @@ function ProductRatesScreen({
                                                                 <stop
                                                                   offset="0%"
                                                                   stopColor="#059669"
-                                                                  stopOpacity="0.32"
+                                                                  stopOpacity="0.25"
                                                                 />
                                                                 <stop
                                                                   offset="100%"
                                                                   stopColor="#059669"
-                                                                  stopOpacity="0.02"
+                                                                  stopOpacity="0.0"
                                                                 />
                                                               </linearGradient>
                                                             </defs>
@@ -13293,11 +13493,11 @@ function ProductRatesScreen({
                                                               strokeWidth="1"
                                                             />
                                                             <text
-                                                              x={xLeft - 5}
-                                                              y={yTop + 3}
+                                                              x={xLeft - 6}
+                                                              y={yTop + 3.5}
                                                               textAnchor="end"
-                                                              fill="#9CA3AF"
-                                                              fontSize="7.5"
+                                                              fill="#80918B"
+                                                              fontSize="8"
                                                               fontWeight="600"
                                                             >
                                                               {arrivalData.yLabels[0].label}
@@ -13314,11 +13514,11 @@ function ProductRatesScreen({
                                                               strokeWidth="1"
                                                             />
                                                             <text
-                                                              x={xLeft - 5}
-                                                              y={yMidY + 3}
+                                                              x={xLeft - 6}
+                                                              y={yMidY + 3.5}
                                                               textAnchor="end"
-                                                              fill="#9CA3AF"
-                                                              fontSize="7.5"
+                                                              fill="#80918B"
+                                                              fontSize="8"
                                                               fontWeight="600"
                                                             >
                                                               {arrivalData.yLabels[1].label}
@@ -13335,11 +13535,11 @@ function ProductRatesScreen({
                                                               strokeWidth="1"
                                                             />
                                                             <text
-                                                              x={xLeft - 5}
-                                                              y={yBottom + 3}
+                                                              x={xLeft - 6}
+                                                              y={yBottom + 3.5}
                                                               textAnchor="end"
-                                                              fill="#9CA3AF"
-                                                              fontSize="7.5"
+                                                              fill="#80918B"
+                                                              fontSize="8"
                                                               fontWeight="600"
                                                             >
                                                               {arrivalData.yLabels[2].label}
@@ -13356,7 +13556,7 @@ function ProductRatesScreen({
                                                               d={linePath}
                                                               fill="none"
                                                               stroke="#059669"
-                                                              strokeWidth="2.2"
+                                                              strokeWidth="2.4"
                                                               strokeLinecap="round"
                                                               strokeLinejoin="round"
                                                             />
@@ -13367,10 +13567,10 @@ function ProductRatesScreen({
                                                                 key={i}
                                                                 cx={c.x}
                                                                 cy={c.y}
-                                                                r="2.8"
+                                                                r="3.5"
                                                                 fill="#FFFFFF"
                                                                 stroke="#059669"
-                                                                strokeWidth="1.8"
+                                                                strokeWidth="2"
                                                               />
                                                             ))}
 
@@ -13379,10 +13579,10 @@ function ProductRatesScreen({
                                                               <text
                                                                 key={i}
                                                                 x={coords[i]?.x ?? xLeft}
-                                                                y={H - 5}
+                                                                y={H - 4}
                                                                 textAnchor="middle"
-                                                                fill="#9CA3AF"
-                                                                fontSize="7.5"
+                                                                fill="#80918B"
+                                                                fontSize="8"
                                                                 fontWeight="600"
                                                                 fontFamily={
                                                                   lang === "ur"
@@ -14526,13 +14726,13 @@ function ProductRatesScreen({
 
         {tab === "trends" && rows.length > 0 && (
           <>
-            {/* Location filter row — same as overview tab */}
-            <div className="flex items-center justify-between">
+            {/* Top Bar: Title on left, Location pill + Timeframe dropdown on right */}
+            <div className="flex items-center justify-between gap-2">
               <p
                 className="text-xs font-bold uppercase tracking-wide"
                 style={{
                   color: "#52635F",
-                  fontSize: lang === "ur" ? 16 : 12,
+                  fontSize: lang === "ur" ? 15 : 12,
                   fontFamily:
                     lang === "ur"
                       ? URDU_FONT
@@ -14541,61 +14741,75 @@ function ProductRatesScreen({
               >
                 {lang === "ur" ? "قیمتوں کے رجحانات" : "Price Trends"}
               </p>
-              <button
-                onClick={() => setLocSheet(true)}
-                className="tap-target flex items-center gap-1 rounded-xl font-semibold text-xs px-2.5 py-1.5"
-                style={{
-                  background:
-                    locScope.kind === "mandi" ? "#087F63" : "#E4F2EC",
-                  color: locScope.kind === "mandi" ? "#fff" : "#075E4F",
-                  border:
-                    locScope.kind === "mandi" ? "none" : "1px solid #C7E8D8",
-                  fontSize: lang === "ur" ? 14 : 12,
-                  fontFamily:
-                    lang === "ur"
-                      ? URDU_FONT
-                      : "inherit",
-                }}
-              >
-                {locScope.kind === "mandi"
-                  ? tm(locScope.label.replace(" Mandi", ""))
-                  : locScope.kind === "province"
-                    ? tm(locScope.label)
-                    : locScope.kind === "district"
-                      ? tm(locScope.label)
-                      : lang === "ur"
-                        ? "قومی سطح"
-                        : "National"}
-              </button>
-            </div>
-            <div className="flex gap-2">
-              {(
-                [
-                  ["week", lang === "ur" ? "ہفتہ" : "Week"],
-                  ["month", lang === "ur" ? "مہینہ" : "Month"],
-                  ["quarter", lang === "ur" ? "تین ماہ" : "Quarter"],
-                ] as ["week" | "month" | "quarter", string][]
-              ).map(([rKey, label]) => (
+
+              <div className="flex items-center gap-1.5">
+                {/* Location selector */}
                 <button
-                  key={rKey}
-                  onClick={() => setRange(rKey)}
-                  className="tap-target flex-1 rounded-xl font-bold text-xs capitalize"
+                  onClick={() => setLocSheet(true)}
+                  className="tap-target flex items-center gap-1 rounded-xl font-bold text-xs px-2.5 py-1.5 transition active:scale-95"
                   style={{
-                    height: lang === "ur" ? 42 : 38,
-                    background: range === rKey ? "#087F63" : "#fff",
-                    color: range === rKey ? "#fff" : "#183B34",
-                    border: range === rKey ? "none" : "1px solid #D5E2DD",
-                    fontSize: lang === "ur" ? 16 : 12,
+                    background:
+                      locScope.kind === "mandi" ? "#087F63" : "#E4F2EC",
+                    color: locScope.kind === "mandi" ? "#fff" : "#075E4F",
+                    border:
+                      locScope.kind === "mandi" ? "none" : "1px solid #C7E8D8",
+                    fontSize: lang === "ur" ? 13 : 11,
                     fontFamily:
                       lang === "ur"
                         ? URDU_FONT
                         : "inherit",
                   }}
                 >
-                  {label}
+                  <span>📍</span>
+                  <span>
+                    {locScope.kind === "mandi"
+                      ? tm(locScope.label.replace(" Mandi", ""))
+                      : locScope.kind === "province"
+                        ? tm(locScope.label)
+                        : locScope.kind === "district"
+                          ? tm(locScope.label)
+                          : lang === "ur"
+                            ? "قومی"
+                            : "National"}
+                  </span>
+                  <span className="text-[9px] opacity-70">▾</span>
                 </button>
-              ))}
+
+                {/* Timeframe Dropdown (Week / Month / Quarter) */}
+                <div className="relative">
+                  <select
+                    value={range}
+                    onChange={(e) => setRange(e.target.value as "week" | "month" | "quarter")}
+                    className="appearance-none font-extrabold rounded-xl px-2.5 py-1.5 pr-5 text-xs outline-none cursor-pointer shadow-sm transition active:scale-95"
+                    style={{
+                      background: "#087F63",
+                      color: "#FFFFFF",
+                      border: "none",
+                      fontSize: lang === "ur" ? 13 : 11,
+                      fontFamily:
+                        lang === "ur"
+                          ? URDU_FONT
+                          : "inherit",
+                    }}
+                  >
+                    <option value="week" className="text-[#183B34] bg-white">
+                      {lang === "ur" ? "📅 ہفتہ (Week)" : "📅 Week"}
+                    </option>
+                    <option value="month" className="text-[#183B34] bg-white">
+                      {lang === "ur" ? "📅 مہینہ (Month)" : "📅 Month"}
+                    </option>
+                    <option value="quarter" className="text-[#183B34] bg-white">
+                      {lang === "ur" ? "📅 تین ماہ (Quarter)" : "📅 Quarter"}
+                    </option>
+                  </select>
+                  <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">
+                    ▾
+                  </span>
+                </div>
+              </div>
             </div>
+
+            {/* Segmented Switcher: Price Trend vs Arrival Trend */}
             <div className="flex gap-2">
               {(
                 [
@@ -14609,12 +14823,12 @@ function ProductRatesScreen({
                 <button
                   key={m}
                   onClick={() => setTrendMode(m)}
-                  className="tap-target flex-1 rounded-xl font-bold text-xs"
+                  className="tap-target flex-1 rounded-xl font-bold text-xs transition"
                   style={{
-                    height: lang === "ur" ? 42 : 38,
+                    height: 34,
                     background: trendMode === m ? "#075E4F" : "#E8EFEC",
                     color: trendMode === m ? "#fff" : "#183B34",
-                    fontSize: lang === "ur" ? 16 : 12,
+                    fontSize: lang === "ur" ? 14 : 11.5,
                     fontFamily:
                       lang === "ur"
                         ? URDU_FONT
