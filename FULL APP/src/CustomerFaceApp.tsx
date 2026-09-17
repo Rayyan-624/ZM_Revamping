@@ -11628,11 +11628,11 @@ function ProductRatesScreen({
 
                     {/* Attributes Bar: Consistent Rate Type Button + 5 More Attributes Toggle */}
                     <div className="w-full flex items-center justify-between gap-2 py-0.5 px-0.5">
-                      {/* 1. EXPOSED RATE TYPE (Consistent with attribute button styling) */}
+                      {/* 1. EXPOSED RATE TYPE (Consistent with attribute button styling, inline arrow) */}
                       <button
                         type="button"
                         onClick={() => setAttrSheet("ratetype")}
-                        className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group flex-1 py-0.5 min-w-0"
+                        className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group py-0.5 min-w-0"
                         title={lang === "ur" ? "نرخ کی قسم تبدیل کریں" : "Change Rate Type"}
                       >
                         <div
@@ -11643,14 +11643,14 @@ function ProductRatesScreen({
                             <path d="M4 19h4V9H4v10zm6 0h4V4h-4v15zm6 0h4v-7h-4v7z" />
                           </svg>
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0">
                           <span
                             className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
                             style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                           >
                             {lang === "ur" ? "نرخ کی قسم" : "Rate Type"}
                           </span>
-                          <div className="flex items-center justify-between gap-1 mt-0.5">
+                          <div className="flex items-center gap-1 mt-0.5">
                             <span
                               className="font-bold text-[11.5px] leading-tight truncate text-[#075E4F]"
                               style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
@@ -11723,17 +11723,18 @@ function ProductRatesScreen({
                       </button>
                     </div>
 
-                    {/* BOTTOM SECTION: 5 Attributes (Color, Spec, Condition & Variety, Quality, Moisture) */}
+                    {/* BOTTOM SECTION: 5 Attributes (Aligned in matching L-to-R rows with inline arrows) */}
                     {isAttrPanelOpen && (() => {
                       const hasMoistureData = allRows.some((r) => r.moisture && r.moisture.trim().length > 0) || (attrMoisture !== null);
                       return (
                         <div className="grid grid-cols-2 divide-x divide-[#EEF3F0] pt-2 animate-fadeIn">
                           {/* LEFT COLUMN: Color, Spec, Condition */}
-                          <div className="flex flex-col gap-y-1.5 pr-2.5">
-                            {/* 1. COLOR */}
+                          <div className="flex flex-col gap-y-2 pr-2">
+                            {/* ROW 1 LEFT: COLOR */}
                             <button
+                              type="button"
                               onClick={() => setAttrSheet("color")}
-                              className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
                             >
                               <div
                                 className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -11750,7 +11751,7 @@ function ProductRatesScreen({
                                 >
                                   {lang === "ur" ? "رنگ" : "Color"}
                                 </span>
-                                <div className="flex items-center justify-between gap-1 mt-0.5">
+                                <div className="flex items-center gap-1 mt-0.5">
                                   <span
                                     className="font-bold text-[11.5px] leading-tight truncate text-[#059669]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
@@ -11764,10 +11765,11 @@ function ProductRatesScreen({
                               </div>
                             </button>
 
-                            {/* 2. SPEC */}
+                            {/* ROW 2 LEFT: SPEC */}
                             <button
+                              type="button"
                               onClick={() => setAttrSheet("spec")}
-                              className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
                             >
                               <div
                                 className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -11784,7 +11786,7 @@ function ProductRatesScreen({
                                 >
                                   {lang === "ur" ? "خصوصیت" : "Spec"}
                                 </span>
-                                <div className="flex items-center justify-between gap-1 mt-0.5">
+                                <div className="flex items-center gap-1 mt-0.5">
                                   <span
                                     className="font-bold text-[11.5px] leading-tight truncate text-[#92400E]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
@@ -11798,11 +11800,12 @@ function ProductRatesScreen({
                               </div>
                             </button>
 
-                            {/* 3. CONDITION (when moisture exists) */}
+                            {/* ROW 3 LEFT: CONDITION (when moisture exists) */}
                             {hasMoistureData && (
                               <button
+                                type="button"
                                 onClick={() => setAttrSheet("condition")}
-                                className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                                className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
                               >
                                 <div
                                   className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -11819,7 +11822,7 @@ function ProductRatesScreen({
                                   >
                                     {lang === "ur" ? "حالت" : "Condition"}
                                   </span>
-                                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                                  <div className="flex items-center gap-1 mt-0.5">
                                     <span
                                       className="font-bold text-[11.5px] leading-tight truncate text-[#065F46]"
                                       style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
@@ -11836,11 +11839,12 @@ function ProductRatesScreen({
                           </div>
 
                           {/* RIGHT COLUMN: Variety, Quality, Moisture/Condition */}
-                          <div className="flex flex-col gap-y-1.5 pl-3">
-                            {/* 4. VARIETY */}
+                          <div className="flex flex-col gap-y-2 pl-2">
+                            {/* ROW 1 RIGHT: VARIETY */}
                             <button
+                              type="button"
                               onClick={() => setAttrSheet("variety")}
-                              className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
                             >
                               <div
                                 className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -11857,7 +11861,7 @@ function ProductRatesScreen({
                                 >
                                   {lang === "ur" ? "قسم" : "Variety"}
                                 </span>
-                                <div className="flex items-center justify-between gap-1 mt-0.5">
+                                <div className="flex items-center gap-1 mt-0.5">
                                   <span
                                     className="font-bold text-[11.5px] leading-tight truncate text-[#6D28D9]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
@@ -11871,10 +11875,11 @@ function ProductRatesScreen({
                               </div>
                             </button>
 
-                            {/* 5. QUALITY (NEW / OLD) */}
+                            {/* ROW 2 RIGHT: QUALITY (NEW / OLD) */}
                             <button
+                              type="button"
                               onClick={() => setAttrSheet("newold")}
-                              className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                              className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
                             >
                               <div
                                 className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -11892,7 +11897,7 @@ function ProductRatesScreen({
                                 >
                                   {lang === "ur" ? "معیار" : "Quality"}
                                 </span>
-                                <div className="flex items-center justify-between gap-1 mt-0.5">
+                                <div className="flex items-center gap-1 mt-0.5">
                                   <span
                                     className="font-bold text-[11.5px] leading-tight truncate text-[#C2410C]"
                                     style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
@@ -11906,11 +11911,12 @@ function ProductRatesScreen({
                               </div>
                             </button>
 
-                            {/* 6. MOISTURE or CONDITION */}
+                            {/* ROW 3 RIGHT: MOISTURE or CONDITION */}
                             {hasMoistureData ? (
                               <button
+                                type="button"
                                 onClick={() => setAttrSheet("moisture")}
-                                className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                                className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
                               >
                                 <div
                                   className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -11927,7 +11933,7 @@ function ProductRatesScreen({
                                   >
                                     {lang === "ur" ? "نمی" : "Moisture"}
                                   </span>
-                                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                                  <div className="flex items-center gap-1 mt-0.5">
                                     <span
                                       className="font-bold text-[11.5px] leading-tight truncate text-[#0369A1]"
                                       style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
@@ -11946,8 +11952,9 @@ function ProductRatesScreen({
                               </button>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => setAttrSheet("condition")}
-                                className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                                className="tap-target flex items-center gap-1.5 transition active:scale-[0.98] group w-full h-[34px]"
                               >
                                 <div
                                   className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -11964,7 +11971,7 @@ function ProductRatesScreen({
                                   >
                                     {lang === "ur" ? "حالت" : "Condition"}
                                   </span>
-                                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                                  <div className="flex items-center gap-1 mt-0.5">
                                     <span
                                       className="font-bold text-[11.5px] leading-tight truncate text-[#065F46]"
                                       style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
