@@ -261,13 +261,13 @@ Error generating stack: `+e.message+`
     display: flex;
     white-space: nowrap;
     width: max-content;
-    animation: marqueeClockwiseL2R 15s linear infinite;
+    animation: marqueeClockwiseL2R 50s linear infinite;
   }
   .racetrack-track-r2l {
     display: flex;
     white-space: nowrap;
     width: max-content;
-    animation: marqueeClockwiseR2L 15s linear infinite;
+    animation: marqueeClockwiseR2L 50s linear infinite;
   }
   @font-face {
     font-family: 'Jameel Noori Nastaleeq';
