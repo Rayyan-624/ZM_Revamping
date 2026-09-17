@@ -6646,35 +6646,35 @@ function ByProductNationalCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className="relative w-full rounded-[26px] overflow-hidden text-white transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-lg mb-3.5 select-none"
+      className="relative w-full rounded-[22px] overflow-hidden text-white transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-md mb-2.5 select-none"
       style={{
         background:
           'linear-gradient(150deg, #034839 0%, #02362A 55%, #01241C 100%)',
-        border: '1.5px solid rgba(52, 211, 153, 0.45)',
+        border: '1.2px solid rgba(52, 211, 153, 0.45)',
         boxShadow:
-          '0 12px 28px rgba(2, 44, 34, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18)',
-        padding: '20px 20px 16px',
-        minHeight: 250,
+          '0 8px 22px rgba(2, 44, 34, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+        padding: '13px 15px 10px',
+        minHeight: 175,
       }}
     >
       {/* Concentric Circle Pattern in bottom-right corner */}
       <div
-        className="absolute -bottom-16 -right-16 pointer-events-none rounded-full"
+        className="absolute -bottom-12 -right-12 pointer-events-none rounded-full"
         style={{
-          width: 240,
-          height: 240,
-          border: '2px solid rgba(52, 211, 153, 0.12)',
+          width: 180,
+          height: 180,
+          border: '1.5px solid rgba(52, 211, 153, 0.12)',
           boxShadow:
-            'inset 0 0 0 28px rgba(52, 211, 153, 0.05), inset 0 0 0 60px rgba(52, 211, 153, 0.03)',
+            'inset 0 0 0 20px rgba(52, 211, 153, 0.05), inset 0 0 0 45px rgba(52, 211, 153, 0.03)',
           zIndex: 0,
         }}
       />
 
       {/* Top Header Row */}
       <div className="relative z-10 flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <h3
-            className="text-[26px] font-black text-white leading-tight tracking-tight"
+            className="text-[19px] font-black text-white leading-tight tracking-tight truncate"
             style={{
               fontFamily: lang === 'ur' ? URDU_FONT : "'Inter', sans-serif",
             }}
@@ -6682,19 +6682,19 @@ function ByProductNationalCard({
             {tc(stats.byproduct)}
           </h3>
           <p
-            className="text-[13px] font-medium text-[#A7F3D0] mt-0.5"
+            className="text-[11.5px] font-medium text-[#A7F3D0] mt-0.5 leading-none"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {tr(stats.mostOccurringRateType)}
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {stats.specialAttr && (
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/90 pr-1">
+            <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-white/90 pr-0.5">
               <span>{lang === 'ur' ? stats.specialAttr.labelUr : stats.specialAttr.labelEn}</span>
               <span
-                className="w-2 h-2 rounded-full inline-block shadow-sm"
+                className="w-1.5 h-1.5 rounded-full inline-block shadow-sm"
                 style={{ backgroundColor: stats.specialAttr.dotColor || '#38BDF8' }}
               />
               <span
@@ -6720,7 +6720,7 @@ function ByProductNationalCard({
                 if (onMorePriceTypesClick) onMorePriceTypesClick();
                 else onClick();
               }}
-              className="tap-target flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#10B981]/60 text-white font-bold text-[11px] transition active:scale-95 shadow-sm"
+              className="tap-target flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-[#10B981]/60 text-white font-bold text-[10px] transition active:scale-95 shadow-sm"
               style={{
                 background: 'rgba(3, 62, 49, 0.85)',
                 backdropFilter: 'blur(8px)',
@@ -6728,10 +6728,10 @@ function ByProductNationalCard({
             >
               <span>
                 {lang === 'ur'
-                  ? 'مزید ' + toUrduDigits(stats.otherRateTypesCount) + '+ ریٹس دیکھیں'
-                  : 'View +' + stats.otherRateTypesCount + ' More Price Types'}
+                  ? 'مزید ' + toUrduDigits(stats.otherRateTypesCount) + '+ ریٹس'
+                  : '+' + stats.otherRateTypesCount + ' Price Types'}
               </span>
-              <span className="text-[#34D399] font-black text-xs">
+              <span className="text-[#34D399] font-black text-[10px]">
                 {lang === 'ur' ? '❮' : '❯'}
               </span>
             </button>
@@ -6739,14 +6739,14 @@ function ByProductNationalCard({
         </div>
       </div>
 
-      {/* Center 2x2 Metrics Grid */}
-      <div className="relative z-10 grid grid-cols-2 gap-x-4 gap-y-3.5 my-4 pt-1">
+      {/* Center 2x2 Metrics Grid (Compact layout) */}
+      <div className="relative z-10 grid grid-cols-2 gap-x-3 gap-y-2 my-2 pt-0.5">
         {/* Row 1, Col 1: Avg Min */}
-        <div className="flex flex-col justify-center pr-2 border-r border-white/15">
-          <span className="text-[11.5px] font-medium text-white/70">
+        <div className="flex flex-col justify-center pr-1.5 border-r border-white/15">
+          <span className="text-[10px] font-medium text-white/70 leading-none">
             {lang === 'ur' ? 'اوسط کم از کم' : 'Avg min'}
           </span>
-          <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
+          <span className="text-[17px] font-black text-white tracking-tight leading-tight my-0.5">
             {stats.hasData && stats.avgMin > 0 ? (
               <AnimatedCounter
                 target={stats.avgMin}
@@ -6758,17 +6758,17 @@ function ByProductNationalCard({
               '—'
             )}
           </span>
-          <span className="text-[11px] font-medium text-white/60">
+          <span className="text-[9.5px] font-medium text-white/60 leading-none">
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
         {/* Row 1, Col 2: Avg Max */}
-        <div className="flex flex-col justify-center pl-2">
-          <span className="text-[11.5px] font-medium text-white/70">
+        <div className="flex flex-col justify-center pl-1.5">
+          <span className="text-[10px] font-medium text-white/70 leading-none">
             {lang === 'ur' ? 'اوسط زیادہ سے زیادہ' : 'Avg max'}
           </span>
-          <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
+          <span className="text-[17px] font-black text-white tracking-tight leading-tight my-0.5">
             {stats.hasData && stats.avgMax > 0 ? (
               <AnimatedCounter
                 target={stats.avgMax}
@@ -6780,27 +6780,30 @@ function ByProductNationalCard({
               '—'
             )}
           </span>
-          <span className="text-[11px] font-medium text-white/60">
+          <span className="text-[9.5px] font-medium text-white/60 leading-none">
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
         {/* Row 2, Col 1: Total Arrival */}
-        <div className="flex flex-col justify-center pr-2 border-r border-white/15">
-          <span className="text-[11.5px] font-medium text-white/70">
+        <div className="flex flex-col justify-center pr-1.5 border-r border-white/15">
+          <span className="text-[10px] font-medium text-white/70 leading-none">
             {lang === 'ur' ? 'کل آمد' : 'Total arrival'}
           </span>
-          <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
+          <span className="text-[17px] font-black text-white tracking-tight leading-tight my-0.5">
             {stats.hasData ? arrivalDisplay : '—'}
           </span>
-          <span className="text-[11px] font-medium text-white/60">
+          <span className="text-[9.5px] font-medium text-white/60 leading-none">
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
-        {/* Row 2, Col 2: Markets (Animated Number from 0 to target+) */}
-        <div className="flex flex-col justify-center pl-2">
-          <span className="text-[22px] font-black text-white tracking-tight leading-none mt-2 mb-0.5">
+        {/* Row 2, Col 2: Markets */}
+        <div className="flex flex-col justify-center pl-1.5">
+          <span className="text-[10px] font-medium text-white/70 leading-none">
+            {lang === 'ur' ? 'منڈیاں / مارکیٹس' : 'Markets'}
+          </span>
+          <span className="text-[17px] font-black text-white tracking-tight leading-tight my-0.5">
             {stats.hasData && stats.markets > 0 ? (
               <AnimatedCounter
                 target={stats.markets}
@@ -6811,18 +6814,18 @@ function ByProductNationalCard({
               '0'
             )}
           </span>
-          <span className="text-[12px] font-semibold text-white/80">
-            {lang === 'ur' ? 'منڈیاں / مارکیٹس' : 'Markets'}
+          <span className="text-[9.5px] font-medium text-white/60 leading-none">
+            {lang === 'ur' ? 'پورے پاکستان سے' : 'Reporting'}
           </span>
         </div>
       </div>
 
-      {/* Bottom Row */}
-      <div className="relative z-10 flex items-end justify-between pt-1">
-        <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-white/70 pb-1">
+      {/* Bottom Row: Timestamp on Left + BIGGER Crop Illustration in Bottom-Right */}
+      <div className="relative z-10 flex items-end justify-between pt-0.5">
+        <div className="flex items-center gap-1 text-[10px] font-medium text-white/70 pb-0.5">
           <svg
-            width="14"
-            height="14"
+            width="12"
+            height="12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -6839,21 +6842,22 @@ function ByProductNationalCard({
           </span>
         </div>
 
-        {/* Crop Illustration */}
+        {/* BIGGER Crop Illustration (Prominent & sharp) */}
         <div className="relative -mb-1 -mr-1 pointer-events-none">
           <img
             src={iconSrc}
             alt={stats.byproduct}
-            className="w-14 h-14 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)] opacity-95"
+            className="w-[68px] h-[68px] object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.45)] opacity-95 transition-transform duration-200 group-hover:scale-105"
+            loading="lazy"
           />
         </div>
       </div>
 
       {/* No Data Overlay if hasData is false */}
       {!stats.hasData && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 rounded-[26px] bg-[#02241C]/80 backdrop-blur-[2px] pointer-events-none">
-          <div className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-center shadow-md">
-            <span className="text-sm font-bold text-white/90">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 rounded-[22px] bg-[#02241C]/80 backdrop-blur-[2px] pointer-events-none">
+          <div className="px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/20 text-center shadow-md">
+            <span className="text-xs font-bold text-white/90">
               {lang === 'ur' ? 'ڈیٹا دستیاب نہیں ہے' : 'No Data Available'}
             </span>
           </div>
