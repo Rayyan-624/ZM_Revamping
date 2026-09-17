@@ -1126,6 +1126,7 @@ type Screen =
     initialColor?: string;
     initialSpec?: string;
     initialCondition?: string;
+    initialMoisture?: string;
     initialStatDate?: string;
   }
   | { id: "analytics" }
@@ -9938,6 +9939,7 @@ function ProductRatesScreen({
   initialColor,
   initialSpec,
   initialCondition,
+  initialMoisture,
   initialStatDate,
 }: {
   vertical: string;
@@ -9956,6 +9958,7 @@ function ProductRatesScreen({
   initialColor?: string;
   initialSpec?: string;
   initialCondition?: string;
+  initialMoisture?: string;
   initialStatDate?: string;
 }) {
   const { lang, t, tc, tm, tr, voiceEnabled } = useLang();
@@ -10000,6 +10003,9 @@ function ProductRatesScreen({
   );
   const [attrRateType, setAttrRateType] = useState<string | null>(
     initialRateType || null,
+  );
+  const [attrMoisture, setAttrMoisture] = useState<string | null>(
+    initialMoisture || null,
   );
   const [attrSheet, setAttrSheet] = useState<
     "variety" | "newold" | "color" | "spec" | "condition" | "moisture" | "ratetype" | null
@@ -27946,6 +27952,7 @@ function AppInner({
               initialColor={(current as ComRatesScr).initialColor}
               initialSpec={(current as ComRatesScr).initialSpec}
               initialCondition={(current as ComRatesScr).initialCondition}
+              initialMoisture={(current as ComRatesScr).initialMoisture}
               initialStatDate={(current as ComRatesScr).initialStatDate}
             />
           )}
