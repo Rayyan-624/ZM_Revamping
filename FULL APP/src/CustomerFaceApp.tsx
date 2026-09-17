@@ -6656,7 +6656,7 @@ function ByProductNationalCard({
         }}
       />
 
-      {/* Top Header: Title & Rate Type on Left; Special Attribute on TOP & +X Count BELOW on Right */}
+      {/* Top Header: Full Width Title & Rate Type */}
       <div className="relative z-10 flex items-start justify-between gap-1.5">
         <div className="min-w-0 flex-1">
           <h3
@@ -6673,42 +6673,6 @@ function ByProductNationalCard({
           >
             {tr(stats.mostOccurringRateType)}
           </p>
-        </div>
-
-        {/* Right Stack: 1) Special Attribute ON TOP, 2) Rate Count BELOW */}
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          {stats.specialAttr && (
-            <div className="flex items-center gap-1 text-[9.5px] font-extrabold px-2 py-0.5 rounded-full bg-[#E0F2FE] border border-[#BAE6FD] text-[#0369A1] shadow-sm">
-              <span
-                className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0"
-                style={{ backgroundColor: stats.specialAttr.dotColor || '#0284C7' }}
-              />
-              <span className="whitespace-nowrap leading-none">
-                {lang === 'ur' ? stats.specialAttr.valueUr : stats.specialAttr.valueEn}
-              </span>
-            </div>
-          )}
-
-          {stats.otherRateTypesCount > 0 && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onMorePriceTypesClick) onMorePriceTypesClick();
-                else onClick();
-              }}
-              className="tap-target flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] text-[#065F46] font-extrabold text-[9.5px] transition active:scale-95 shadow-sm"
-            >
-              <span>
-                {lang === 'ur'
-                  ? '+' + toUrduDigits(stats.otherRateTypesCount) + ' ریٹس'
-                  : '+' + stats.otherRateTypesCount + ' Rates'}
-              </span>
-              <span className="text-[#087F63] font-black text-[8.5px]">
-                {lang === 'ur' ? '❮' : '❯'}
-              </span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -6760,7 +6724,7 @@ function ByProductNationalCard({
           </span>
         </div>
 
-        {/* 3. Total Arrival (Bags cleanly visible with zero truncation!) */}
+        {/* 3. Total Arrival (With Locations count below it when special attribute is placed in Tile 4) */}
         <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between min-h-[58px]">
           <span
             className="text-[10px] font-bold text-[#52635F] leading-tight"
@@ -6784,28 +6748,77 @@ function ByProductNationalCard({
               —
             </span>
           )}
+          {stats.specialAttr && stats.hasData && stats.markets > 0 ? (
+            <span
+              className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none truncate"
+              style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+            >
+              {lang === 'ur'
+                ? `${toUrduDigits(stats.markets)}+ مقامات`
+                : `${stats.markets}+ Locations`}
+            </span>
+          ) : (
+            <span className="text-[8.5px] sm:text-[9px] font-bold text-[#80918B] leading-none invisible">
+              -
+            </span>
+          )}
         </div>
 
-        {/* 4. Locations (Count Only, e.g. 30+, NO "All Pakistan" text!) */}
-        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-center min-h-[58px]">
-          <span
-            className="text-[10px] font-bold text-[#52635F] leading-tight"
-            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
-          >
-            {lang === 'ur' ? 'مقامات' : 'Locations'}
-          </span>
-          <span className="text-[15px] sm:text-[16.5px] font-black text-[#087F63] tracking-tight leading-tight my-0.5">
-            {stats.hasData && stats.markets > 0 ? (
-              <AnimatedCounter
-                target={stats.markets}
-                suffix="+"
-                formatUrdu={lang === 'ur'}
+        {/* 4. Special Attribute (in place of locations) OR Locations (when no special attribute) */}
+        {stats.specialAttr ? (
+          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between min-h-[58px]">
+            <span
+              className="text-[10px] font-bold text-[#52635F] leading-tight truncate"
+              style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+            >
+              {lang === 'ur' ? stats.specialAttr.labelUr : stats.specialAttr.labelEn}
+            </span>
+            <div className="flex items-center gap-1.5 my-0.5 min-w-0">
+              <span
+                className="w-2 h-2 rounded-full inline-block flex-shrink-0"
+                style={{ backgroundColor: stats.specialAttr.dotColor || '#0284C7' }}
               />
-            ) : (
-              '0'
-            )}
-          </span>
-        </div>
+              <span
+                className="text-[13px] sm:text-[14px] font-black text-[#0369A1] tracking-tight leading-tight truncate"
+                style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+              >
+                {lang === 'ur' ? stats.specialAttr.valueUr : stats.specialAttr.valueEn}
+              </span>
+            </div>
+            <span
+              className="text-[8.5px] sm:text-[9px] font-bold text-[#0284C7] leading-none truncate"
+              style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+            >
+              {lang === 'ur' ? 'خصوصی معیار' : 'Spec'}
+            </span>
+          </div>
+        ) : (
+          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between min-h-[58px]">
+            <span
+              className="text-[10px] font-bold text-[#52635F] leading-tight"
+              style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+            >
+              {lang === 'ur' ? 'مقامات' : 'Locations'}
+            </span>
+            <span className="text-[15px] sm:text-[16.5px] font-black text-[#087F63] tracking-tight leading-tight my-0.5">
+              {stats.hasData && stats.markets > 0 ? (
+                <AnimatedCounter
+                  target={stats.markets}
+                  suffix="+"
+                  formatUrdu={lang === 'ur'}
+                />
+              ) : (
+                '0'
+              )}
+            </span>
+            <span
+              className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+              style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+            >
+              {lang === 'ur' ? 'منڈیاں' : 'Markets'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Bottom Row: Timestamp on Left + Crisp Crop Illustration on Right */}
