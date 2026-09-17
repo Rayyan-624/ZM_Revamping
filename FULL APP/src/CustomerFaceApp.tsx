@@ -6070,11 +6070,11 @@ const CATALOG_POLICY_RULES: Record<
     },
   },
   "Maize Grade B": {
-    type: "multi",
-    labelEn: "Moisture · Type",
-    labelUr: "نمی • معیار",
-    valueEn: "14-16% · New",
-    valueUr: "۱۴-۱۶٪ • نیا",
+    type: "moisture",
+    labelEn: "Moisture",
+    labelUr: "نمی",
+    valueEn: "14-16%",
+    valueUr: "۱۴-۱۶٪",
     dotColor: "#38BDF8",
     filterFn: (r) => {
       const m = (r.moisture || "").toLowerCase();
@@ -6083,11 +6083,11 @@ const CATALOG_POLICY_RULES: Record<
     },
   },
   "Maize Grade C": {
-    type: "multi",
-    labelEn: "Moisture · Type",
-    labelUr: "نمی • معیار",
-    valueEn: "16-18% · New",
-    valueUr: "۱۶-۱۸٪ • نیا",
+    type: "moisture",
+    labelEn: "Moisture",
+    labelUr: "نمی",
+    valueEn: "16-18%",
+    valueUr: "۱۶-۱۸٪",
     dotColor: "#38BDF8",
     filterFn: (r) => {
       const m = (r.moisture || "").toLowerCase();
@@ -6147,11 +6147,11 @@ const CATALOG_POLICY_RULES: Record<
     filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
   },
   "Paddy 1692": {
-    type: "multi",
-    labelEn: "Moisture · Type",
-    labelUr: "نمی • معیار",
-    valueEn: "11-14% · New",
-    valueUr: "۱۱-۱۴٪ • نیا",
+    type: "moisture",
+    labelEn: "Moisture",
+    labelUr: "نمی",
+    valueEn: "11-14%",
+    valueUr: "۱۱-۱۴٪",
     dotColor: "#38BDF8",
     filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
   },
@@ -6174,11 +6174,11 @@ const CATALOG_POLICY_RULES: Record<
     filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
   },
   "Paddy 86": {
-    type: "multi",
-    labelEn: "Moisture · Type",
-    labelUr: "نمی • معیار",
-    valueEn: "11-14% · New",
-    valueUr: "۱۱-۱۴٪ • نیا",
+    type: "moisture",
+    labelEn: "Moisture",
+    labelUr: "نمی",
+    valueEn: "11-14%",
+    valueUr: "۱۱-۱۴٪",
     dotColor: "#38BDF8",
     filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
   },
@@ -6192,20 +6192,20 @@ const CATALOG_POLICY_RULES: Record<
     filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
   },
   "Paddy Super": {
-    type: "multi",
-    labelEn: "Moisture · Type",
-    labelUr: "نمی • معیار",
-    valueEn: "11-14% · New",
-    valueUr: "۱۱-۱۴٪ • نیا",
+    type: "moisture",
+    labelEn: "Moisture",
+    labelUr: "نمی",
+    valueEn: "11-14%",
+    valueUr: "۱۱-۱۴٪",
     dotColor: "#38BDF8",
     filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
   },
   "Paddy Supri": {
-    type: "multi",
-    labelEn: "Moisture · Type",
-    labelUr: "نمی • معیار",
-    valueEn: "11-14% · New",
-    valueUr: "۱۱-۱۴٪ • نیا",
+    type: "moisture",
+    labelEn: "Moisture",
+    labelUr: "نمی",
+    valueEn: "11-14%",
+    valueUr: "۱۱-۱۴٪",
     dotColor: "#38BDF8",
     filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
   },
@@ -6635,12 +6635,10 @@ function ByProductNationalCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className="relative w-full rounded-[22px] overflow-hidden transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-[0_5px_18px_rgba(6,77,64,0.08)] hover:shadow-[0_8px_24px_rgba(6,77,64,0.13)] select-none flex flex-col justify-between"
+      className="relative w-full rounded-[22px] overflow-hidden transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-[0_5px_18px_rgba(6,77,64,0.08)] hover:shadow-[0_8px_24px_rgba(6,77,64,0.13)] select-none flex flex-col p-3 sm:p-3.5"
       style={{
         background: '#FFFFFF',
         border: '1.5px solid #D1E5DC',
-        padding: '13px 13px 11px',
-        minHeight: 220,
       }}
     >
       {/* Subtle Concentric Rings Motif in bottom-right corner */}
@@ -6657,38 +6655,37 @@ function ByProductNationalCard({
       />
 
       {/* Top Header: Full Width Title & Rate Type */}
-      <div className="relative z-10 flex items-start justify-between gap-1.5">
-        <div className="min-w-0 flex-1">
-          <h3
-            className="text-[16px] sm:text-[17px] font-black text-[#143B33] leading-tight tracking-tight line-clamp-1"
-            style={{
-              fontFamily: lang === 'ur' ? URDU_FONT : "'Inter', sans-serif",
-            }}
-          >
-            {tc(stats.byproduct)}
-          </h3>
-          <p
-            className="text-[11.5px] sm:text-[12px] font-bold text-[#087F63] mt-0.5 leading-none truncate"
-            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
-          >
-            {tr(stats.mostOccurringRateType)}
-          </p>
-        </div>
+      <div className="relative z-10 w-full mb-2">
+        <h3
+          className="text-[15px] sm:text-[16px] font-black text-[#143B33] leading-tight tracking-tight truncate"
+          style={{
+            fontFamily: lang === 'ur' ? URDU_FONT : "'Inter', sans-serif",
+          }}
+          title={tc(stats.byproduct)}
+        >
+          {tc(stats.byproduct)}
+        </h3>
+        <p
+          className="text-[11px] sm:text-[11.5px] font-bold text-[#087F63] mt-0.5 leading-none truncate"
+          style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
+        >
+          {tr(stats.mostOccurringRateType)}
+        </p>
       </div>
 
       {/* Metric Tiles (Left & Right Columns) */}
-      <div className="relative z-10 grid grid-cols-2 gap-2 my-2">
+      <div className="relative z-10 grid grid-cols-2 gap-2 w-full">
         {/* LEFT COLUMN */}
         <div className="flex flex-col gap-2">
           {/* 1. Avg Min */}
-          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between min-h-[58px]">
+          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 h-[55px] flex flex-col justify-between">
             <span
-              className="text-[10px] font-bold text-[#52635F] leading-tight"
+              className="text-[9.5px] sm:text-[10px] font-bold text-[#52635F] leading-none truncate"
               style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
             >
               {lang === 'ur' ? 'اوسط کم' : 'Avg Min'}
             </span>
-            <span className="text-[14px] sm:text-[15.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5">
+            <span className="text-[13px] sm:text-[14px] font-black text-[#143B33] tracking-tight leading-none truncate my-0.5">
               {stats.hasData && stats.avgMin > 0
                 ? lang === 'ur'
                   ? `روپے ${toUrduDigits(stats.avgMin.toLocaleString())}`
@@ -6696,7 +6693,7 @@ function ByProductNationalCard({
                 : '—'}
             </span>
             <span
-              className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+              className="text-[8px] sm:text-[8.5px] font-bold text-[#087F63] leading-none truncate"
               style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
             >
               {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
@@ -6704,41 +6701,44 @@ function ByProductNationalCard({
           </div>
 
           {/* 2. Total Arrival */}
-          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between min-h-[58px]">
+          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 h-[55px] flex flex-col justify-between">
             <span
-              className="text-[10px] font-bold text-[#52635F] leading-tight"
+              className="text-[9.5px] sm:text-[10px] font-bold text-[#52635F] leading-none truncate"
               style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
             >
               {lang === 'ur' ? 'کل آمد' : 'Total Arrival'}
             </span>
             {stats.hasData && stats.totalArrival > 0 ? (
-              <div className="flex items-baseline flex-wrap gap-x-1 leading-tight my-0.5">
+              <div className="flex items-baseline flex-wrap gap-x-1 leading-none my-0.5">
                 <span className="text-[13px] sm:text-[14px] font-black text-[#143B33] leading-none">
                   {lang === 'ur'
                     ? toUrduDigits(stats.totalArrival.toLocaleString())
                     : stats.totalArrival.toLocaleString()}
                 </span>
-                <span className="text-[9px] font-extrabold text-[#087F63] leading-none">
+                <span className="text-[8.5px] font-extrabold text-[#087F63] leading-none">
                   {lang === 'ur' ? 'تھیلے' : 'Bags'}
                 </span>
               </div>
             ) : (
-              <span className="text-[13px] font-black text-[#143B33] leading-tight my-0.5">
+              <span className="text-[13px] font-black text-[#143B33] leading-none my-0.5">
                 —
               </span>
             )}
+            <span className="text-[8px] font-bold text-[#80918B] leading-none invisible">
+              -
+            </span>
           </div>
 
           {/* 3. Locations (Separate Tile below Total Arrival when special attribute is on the right) */}
           {stats.specialAttr && (
-            <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-center min-h-[58px]">
+            <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 h-[55px] flex flex-col justify-between">
               <span
-                className="text-[10px] font-bold text-[#52635F] leading-tight"
+                className="text-[9.5px] sm:text-[10px] font-bold text-[#52635F] leading-none truncate"
                 style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
               >
                 {lang === 'ur' ? 'مقامات' : 'Locations'}
               </span>
-              <span className="text-[15px] sm:text-[16.5px] font-black text-[#087F63] tracking-tight leading-tight my-0.5">
+              <span className="text-[15px] sm:text-[16px] font-black text-[#087F63] tracking-tight leading-none my-0.5">
                 {stats.hasData && stats.markets > 0 ? (
                   <AnimatedCounter
                     target={stats.markets}
@@ -6749,6 +6749,9 @@ function ByProductNationalCard({
                   '0'
                 )}
               </span>
+              <span className="text-[8px] font-bold text-[#80918B] leading-none invisible">
+                -
+              </span>
             </div>
           )}
         </div>
@@ -6756,14 +6759,14 @@ function ByProductNationalCard({
         {/* RIGHT COLUMN */}
         <div className="flex flex-col gap-2">
           {/* 1. Avg Max */}
-          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between min-h-[58px]">
+          <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 h-[55px] flex flex-col justify-between">
             <span
-              className="text-[10px] font-bold text-[#52635F] leading-tight"
+              className="text-[9.5px] sm:text-[10px] font-bold text-[#52635F] leading-none truncate"
               style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
             >
               {lang === 'ur' ? 'اوسط زیادہ' : 'Avg Max'}
             </span>
-            <span className="text-[14px] sm:text-[15.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5">
+            <span className="text-[13px] sm:text-[14px] font-black text-[#143B33] tracking-tight leading-none truncate my-0.5">
               {stats.hasData && stats.avgMax > 0
                 ? lang === 'ur'
                   ? `روپے ${toUrduDigits(stats.avgMax.toLocaleString())}`
@@ -6771,7 +6774,7 @@ function ByProductNationalCard({
                 : '—'}
             </span>
             <span
-              className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+              className="text-[8px] sm:text-[8.5px] font-bold text-[#087F63] leading-none truncate"
               style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
             >
               {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
@@ -6780,9 +6783,9 @@ function ByProductNationalCard({
 
           {/* 2. Special Attribute OR Locations (when no special attribute) */}
           {stats.specialAttr ? (
-            <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-center min-h-[58px]">
+            <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 h-[55px] flex flex-col justify-between">
               <span
-                className="text-[10px] font-bold text-[#52635F] leading-tight truncate"
+                className="text-[9.5px] sm:text-[10px] font-bold text-[#52635F] leading-none truncate"
                 style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
               >
                 {lang === 'ur' ? stats.specialAttr.labelUr : stats.specialAttr.labelEn}
@@ -6793,22 +6796,25 @@ function ByProductNationalCard({
                   style={{ backgroundColor: stats.specialAttr.dotColor || '#0284C7' }}
                 />
                 <span
-                  className="text-[13px] sm:text-[14px] font-black text-[#0369A1] tracking-tight leading-tight truncate"
+                  className="text-[12.5px] sm:text-[13.5px] font-black text-[#0369A1] tracking-tight leading-none truncate"
                   style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
                 >
                   {lang === 'ur' ? stats.specialAttr.valueUr : stats.specialAttr.valueEn}
                 </span>
               </div>
+              <span className="text-[8px] font-bold text-[#80918B] leading-none invisible">
+                -
+              </span>
             </div>
           ) : (
-            <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 sm:p-2.5 flex flex-col justify-center min-h-[58px]">
+            <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 h-[55px] flex flex-col justify-between">
               <span
-                className="text-[10px] font-bold text-[#52635F] leading-tight"
+                className="text-[9.5px] sm:text-[10px] font-bold text-[#52635F] leading-none truncate"
                 style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
               >
                 {lang === 'ur' ? 'مقامات' : 'Locations'}
               </span>
-              <span className="text-[15px] sm:text-[16.5px] font-black text-[#087F63] tracking-tight leading-tight my-0.5">
+              <span className="text-[15px] sm:text-[16px] font-black text-[#087F63] tracking-tight leading-none my-0.5">
                 {stats.hasData && stats.markets > 0 ? (
                   <AnimatedCounter
                     target={stats.markets}
@@ -6819,14 +6825,17 @@ function ByProductNationalCard({
                   '0'
                 )}
               </span>
+              <span className="text-[8px] font-bold text-[#80918B] leading-none invisible">
+                -
+              </span>
             </div>
           )}
         </div>
       </div>
 
       {/* Bottom Row: Timestamp on Left + Crisp Crop Illustration on Right */}
-      <div className="relative z-10 flex items-end justify-between pt-1">
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#52635F] pb-0.5">
+      <div className="relative z-10 flex items-end justify-between mt-auto pt-2 min-h-[36px]">
+        <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] font-bold text-[#52635F]">
           <svg
             width="12"
             height="12"
@@ -6847,11 +6856,11 @@ function ByProductNationalCard({
         </div>
 
         {/* Large Crisp Crop Illustration */}
-        <div className="relative -mb-1.5 -mr-1 pointer-events-none flex-shrink-0">
+        <div className="relative -mb-1 -mr-1 pointer-events-none flex-shrink-0">
           <img
             src={iconSrc}
             alt={stats.byproduct}
-            className="w-[58px] h-[58px] sm:w-[64px] sm:h-[64px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.14)] transition-transform duration-200"
+            className="w-[50px] h-[50px] sm:w-[56px] sm:h-[56px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.14)] transition-transform duration-200"
             loading="lazy"
           />
         </div>
