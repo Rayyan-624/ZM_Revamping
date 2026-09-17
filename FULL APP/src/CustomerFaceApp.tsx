@@ -668,7 +668,7 @@ const AUTO_URDU_DICT: Record<string, string> = {
   "Unit = Rs. · Unit = (40 kg)": "اکائی = روپے · وزن = (۴۰ کلو)",
   Days: "دن",
   "Price (Rs/40kg)": "قیمت (روپے / ۴۰ کلو)",
-  "Arrivals (MT)": "آمد (میٹرک ٹن)",
+  "Arrivals (Bags)": "آمد (تھیلے)",
   Jan: "جنوری",
   Feb: "فروری",
   Mar: "مارچ",
@@ -6792,7 +6792,7 @@ function ByProductNationalCard({
             className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
-            {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
+            {stats.hasData && stats.totalArrival > 0 ? (lang === 'ur' ? 'کل بوری' : 'Total Bags') : ''}
           </span>
         </div>
 
@@ -12998,19 +12998,18 @@ function ProductRatesScreen({
                                         className="p-0 border-b-2 border-[#10B981]"
                                         style={{
                                           background: "#F4FAF7",
-                                          position: "sticky",
-                                          left: 0,
-                                          zIndex: 20,
+                                          padding: 0,
                                         }}
                                       >
                                         <div
                                           style={{
-                                            width: "100%",
-                                            maxWidth: "calc(100vw - 32px)",
-                                            minWidth: 320,
+                                            position: "sticky",
+                                            left: 0,
+                                            width: "calc(100vw - 32px)",
+                                            maxWidth: "100%",
                                             boxSizing: "border-box",
                                           }}
-                                          className="p-3 flex flex-col gap-2.5 shadow-inner"
+                                          className="p-3 flex flex-col gap-2.5 shadow-inner bg-[#F4FAF7]"
                                         >
                                           {/* 1. Header: Dot + Mandi Title + Tabs (Price vs Arrival) + Close 'X' */}
                                           <div className="flex items-center justify-between">
@@ -14760,7 +14759,6 @@ function ProductRatesScreen({
                         : "inherit",
                   }}
                 >
-                  <span>📍</span>
                   <span>
                     {locScope.kind === "mandi"
                       ? tm(locScope.label.replace(" Mandi", ""))
@@ -14769,8 +14767,8 @@ function ProductRatesScreen({
                         : locScope.kind === "district"
                           ? tm(locScope.label)
                           : lang === "ur"
-                            ? "قومی"
-                            : "National"}
+                            ? "پاکستان"
+                            : "Pakistan"}
                   </span>
                   <span className="text-[9px] opacity-70">▾</span>
                 </button>
@@ -14793,13 +14791,13 @@ function ProductRatesScreen({
                     }}
                   >
                     <option value="week" className="text-[#183B34] bg-white">
-                      {lang === "ur" ? "📅 ہفتہ (Week)" : "📅 Week"}
+                      {lang === "ur" ? "ہفتہ (Week)" : "Week"}
                     </option>
                     <option value="month" className="text-[#183B34] bg-white">
-                      {lang === "ur" ? "📅 مہینہ (Month)" : "📅 Month"}
+                      {lang === "ur" ? "مہینہ (Month)" : "Month"}
                     </option>
                     <option value="quarter" className="text-[#183B34] bg-white">
-                      {lang === "ur" ? "📅 تین ماہ (Quarter)" : "📅 Quarter"}
+                      {lang === "ur" ? "تین ماہ (Quarter)" : "Quarter"}
                     </option>
                   </select>
                   <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-white text-[9px] font-bold">
@@ -15287,14 +15285,14 @@ function ProductRatesScreen({
                           </span>
                         </div>
                         <span className="text-[10px] font-semibold text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded-md border border-[#FDE68A]">
-                          {lang === "ur" ? "میٹرک ٹن / تھیلے" : "MT / Bags"}
+                          {lang === "ur" ? "تھیلے" : "Bags"}
                         </span>
                       </div>
 
                       <div className="flex items-baseline justify-between flex-wrap gap-2">
                         <div className="flex items-baseline gap-2">
                           <span className="text-2xl font-black text-[#92400E]">
-                            {lang === "ur" ? `${toUrduDigits(displayArr.toLocaleString())} میٹرک ٹن` : `${displayArr.toLocaleString()} MT`}
+                            {lang === "ur" ? `${toUrduDigits(displayArr.toLocaleString())} تھیلے` : `${displayArr.toLocaleString()} Bags`}
                           </span>
                         </div>
                         <div className="text-[11px] font-semibold text-[#52635F]">
@@ -15308,7 +15306,7 @@ function ProductRatesScreen({
                             {lang === "ur" ? "کل آمد" : "Total Period"}
                           </span>
                           <span className="font-bold text-[#78350F] text-xs">
-                            {totalArrival.toLocaleString()} MT
+                            {totalArrival.toLocaleString()} Bags
                           </span>
                         </div>
                         <div className="bg-[#FFFDF5] p-1.5 rounded-lg border border-[#FDE68A] flex flex-col">
@@ -15316,7 +15314,7 @@ function ProductRatesScreen({
                             {lang === "ur" ? "سب سے زیادہ" : "Peak Day"}
                           </span>
                           <span className="font-bold text-[#78350F] text-xs">
-                            {peakArrival.toLocaleString()} MT
+                            {peakArrival.toLocaleString()} Bags
                           </span>
                         </div>
                         <div className="bg-[#FFFDF5] p-1.5 rounded-lg border border-[#FDE68A] flex flex-col">
@@ -15324,7 +15322,7 @@ function ProductRatesScreen({
                             {lang === "ur" ? "روزانہ اوسط" : "Daily Avg"}
                           </span>
                           <span className="font-bold text-[#92400E] text-xs">
-                            {avgArrival.toLocaleString()} MT
+                            {avgArrival.toLocaleString()} Bags
                           </span>
                         </div>
                       </div>
