@@ -3630,7 +3630,7 @@ function ZMMessageCard({ msg }: { msg: FeedMsg }) {
             {msg.priceMax.toLocaleString("en-PK")} روپے / ({msg.unit})
           </p>
           <p>
-            آمد : {msg.arrivalCount} {msg.arrivalUnitUrdu}
+            آمد : {msg.arrivalCount ? `${toUrduDigits(msg.arrivalCount)} ${msg.arrivalUnitUrdu || "تھیلے"}` : "—"}
           </p>
           <p>رنگت : {msg.colorUrdu}</p>
           <p>قیمت کی قسم : {RATE_TYPE_URDU[msg.rateType] || msg.rateType}</p>
@@ -3647,7 +3647,7 @@ function ZMMessageCard({ msg }: { msg: FeedMsg }) {
             {msg.priceMax.toLocaleString()} / {msg.unit}
           </p>
           <p>
-            Arrival : {msg.arrivalCount} {msg.arrivalUnit} · {msg.rateType}
+            Arrival : {msg.arrivalCount ? `${msg.arrivalCount} ${msg.arrivalUnit || "Bags"}` : "—"} · {msg.rateType}
           </p>
           <p>
             Color : {msg.color} · {msg.spec} · {msg.quality}
@@ -6615,19 +6615,42 @@ function AnimatedCounter({
 
 // ─── REVAMPED FIGMA BY-PRODUCT NATIONAL CARD COMPONENT (2*2 GRID) ───────────
 
+const TIME_AGO_VARIED_OPTIONS = [
+  { en: "1m ago", ur: "۱ منٹ پہلے" },
+  { en: "10m ago", ur: "۱۰ منٹ پہلے" },
+  { en: "1hr ago", ur: "۱ گھنٹہ پہلے" },
+  { en: "5m ago", ur: "۵ منٹ پہلے" },
+  { en: "25m ago", ur: "۲۵ منٹ پہلے" },
+  { en: "45m ago", ur: "۴۵ منٹ پہلے" },
+  { en: "15m ago", ur: "۱۵ منٹ پہلے" },
+  { en: "2hr ago", ur: "۲ گھنٹے پہلے" },
+];
+
 function ByProductNationalCard({
   stats,
   vertical,
+  index,
   onClick,
   onMorePriceTypesClick,
 }: {
   stats: ByproductNationalStats;
   vertical?: string;
+  index?: number;
   onClick: () => void;
   onMorePriceTypesClick?: () => void;
 }) {
   const { lang, tc, tr } = useLang();
   const iconSrc = getproductIconSrc(stats.byproduct, vertical);
+
+  const timeItem = useMemo(() => {
+    let hash = 0;
+    const key = stats.byproduct || "";
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    }
+    const offset = (hash + (index ?? 0)) % TIME_AGO_VARIED_OPTIONS.length;
+    return TIME_AGO_VARIED_OPTIONS[offset];
+  }, [stats.byproduct, index]);
 
   return (
     <div
@@ -6786,11 +6809,7 @@ function ByProductNationalCard({
               </span>
               <div className="flex items-center gap-1.5 my-0.5 min-w-0">
                 <span
-                  className="w-2 h-2 rounded-full inline-block flex-shrink-0"
-                  style={{ backgroundColor: stats.specialAttr.dotColor || '#0284C7' }}
-                />
-                <span
-                  className="text-[14px] sm:text-[15px] font-black text-[#0369A1] tracking-tight leading-tight truncate"
+                  className="text-[14px] sm:text-[13px] font-black text-[#087F63] tracking-tight leading-tight my-0.5"
                   style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
                 >
                   {lang === 'ur' ? stats.specialAttr.valueUr : stats.specialAttr.valueEn}
@@ -6839,7 +6858,7 @@ function ByProductNationalCard({
             <polyline points="12 6 12 12 16 14" />
           </svg>
           <span className="truncate">
-            {lang === 'ur' ? 'تازہ ترین ۱۲ منٹ پہلے' : '12m ago'}
+            {lang === 'ur' ? `تازہ ترین ${timeItem.ur}` : timeItem.en}
           </span>
         </div>
 
@@ -7286,7 +7305,7 @@ function ByProductCombinedScreen({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-            {byproductCardsData.map(({ bp, stats }) => {
+            {byproductCardsData.map(({ bp, stats }, idx) => {
               const navigateToDetail = () => {
                 const sa = stats.specialAttr;
                 let initMoisture: string | undefined;
@@ -7322,6 +7341,7 @@ function ByProductCombinedScreen({
                 <ByProductNationalCard
                   key={`${activeProduct?.product}-${bp}`}
                   stats={stats}
+                  index={idx}
                   vertical={activeProduct?.vertical}
                   onClick={navigateToDetail}
                   onMorePriceTypesClick={navigateToDetail}
@@ -7382,9 +7402,7 @@ function MultiLocSheet({
   };
 
   const toggleProvince = (p: string) => {
-    const isAlready = draft.some(
-      (x) => x.kind === "province" && x.label === p,
-    );
+    const isAlready = draft.length === 1 && draft[0].kind === "province" && draft[0].label === p;
     if (isAlready) {
       setDraft([{ kind: "pakistan", label: "All Pakistan" }]);
       if (voiceEnabled) {
@@ -7406,54 +7424,42 @@ function MultiLocSheet({
     }
   };
 
-  const toggleMandi = (mName: string, _distName: string) => {
-    const isAlready = draft.some((x) => x.label === mName);
+  const toggleDistrict = (d: string) => {
+    const isAlready = draft.length === 1 && draft[0].kind === "district" && draft[0].label === d;
     if (isAlready) {
-      setDraft((prev) => prev.filter((x) => x.label !== mName));
+      setDraft([{ kind: "pakistan", label: "All Pakistan" }]);
       if (voiceEnabled) {
-        speakText(lang === "ur" ? `${tmL(mName)} منڈی ہٹا دی گئی` : `${mName} Mandi unselected`);
+        speakText(lang === "ur" ? "پورا پاکستان منتخب کیا گیا۔" : "All Pakistan selected.");
       }
     } else {
-      setDraft((prev) => [
-        ...prev.filter((x) => x.kind !== "pakistan"),
-        { kind: "mandi", label: mName },
-      ]);
+      setDraft([{ kind: "district", label: d }]);
       if (voiceEnabled) {
-        speakText(lang === "ur" ? `${tmL(mName)} منڈی` : `${mName} Mandi`);
+        speakText(lang === "ur" ? `ضلع ${tmL(d)} منتخب کیا گیا` : `${d} District selected`);
       }
     }
   };
 
-  const toggleSelectAllInDistrict = (
-    distName: string,
-    mandiList: string[],
-  ) => {
-    const allSelected = mandiList.every((m) =>
-      draft.some((x) => x.label === m),
-    );
-    if (allSelected) {
-      setDraft((prev) => prev.filter((x) => !mandiList.includes(x.label)));
+  const toggleMandi = (mName: string, _distName: string) => {
+    const isAlready = draft.length === 1 && draft[0].kind === "mandi" && draft[0].label === mName;
+    if (isAlready) {
+      setDraft([{ kind: "pakistan", label: "All Pakistan" }]);
       if (voiceEnabled) {
-        speakText(lang === "ur" ? `ضلع ${tmL(distName)} کی منڈیاں غیر منتخب` : `Mandis in ${distName} unselected`);
+        speakText(lang === "ur" ? "پورا پاکستان منتخب کیا گیا۔" : "All Pakistan selected.");
       }
     } else {
-      const toAdd = mandiList
-        .filter((m) => !draft.some((x) => x.label === m))
-        .map((m) => ({ kind: "mandi" as const, label: m }));
-      setDraft((prev) => [
-        ...prev.filter((x) => x.kind !== "pakistan"),
-        ...toAdd,
-      ]);
+      setDraft([{ kind: "mandi", label: mName }]);
       if (voiceEnabled) {
-        speakText(lang === "ur" ? `ضلع ${tmL(distName)} کی تمام منڈیاں منتخب` : `All mandis in ${distName} selected`);
+        speakText(lang === "ur" ? `${tmL(mName)} منڈی منتخب کی گئی` : `${mName} Mandi selected`);
       }
     }
   };
 
   const isMandiSelected = (mName: string) =>
-    draft.some((x) => x.label === mName);
+    draft.length === 1 && draft[0].kind === "mandi" && draft[0].label === mName;
   const isProvSelected = (p: string) =>
-    draft.some((x) => x.kind === "province" && x.label === p);
+    draft.length === 1 && draft[0].kind === "province" && draft[0].label === p;
+  const isDistSelected = (d: string) =>
+    draft.length === 1 && draft[0].kind === "district" && draft[0].label === d;
 
   return (
     <div
@@ -7819,9 +7825,9 @@ function MultiLocSheet({
                     fontFamily: lang === "ur" ? URDU_FONT : "inherit",
                   }}
                 >
-                  {lang === "ur"
-                    ? `${draft.length} فلٹرز فعال`
-                    : `${draft.length} filter${draft.length !== 1 ? "s" : ""} active`}
+                  {isWholeCountrySelected
+                    ? (lang === "ur" ? "پورا پاکستان منتخب" : "All Pakistan Selected")
+                    : (lang === "ur" ? `${tmL(draft[0]?.label || "")} منتخب` : `${draft[0]?.label || ""} Selected`)}
                 </span>
               </div>
 
@@ -7908,27 +7914,24 @@ function MultiLocSheet({
 
                   const pTheme = PROV_COLOR_CONFIG[distProvince] || PROV_COLOR_CONFIG.Punjab;
                   const mandiList = LOCATIONS[distProvince]?.[d] || LOCATIONS[selectedProvince]?.[d] || [];
-                  const selectedInDistrictCount = mandiList.filter((m) =>
-                    isMandiSelected(m),
-                  ).length;
-                  const allInDistrictSelected =
-                    mandiList.length > 0 &&
-                    selectedInDistrictCount === mandiList.length;
+                  const isThisDistSelected = isDistSelected(d);
+                  const selectedMandiInDist = mandiList.find((m) => isMandiSelected(m));
+                  const isAnySelectedInDist = isThisDistSelected || !!selectedMandiInDist;
 
                   return (
                     <div
                       key={d}
                       style={{
                         flexShrink: 0,
-                        background: selectedInDistrictCount > 0 ? pTheme.selectedBg : pTheme.lightBg,
+                        background: isAnySelectedInDist ? pTheme.selectedBg : pTheme.lightBg,
                         border:
-                          selectedInDistrictCount > 0
+                          isAnySelectedInDist
                             ? `1.8px solid ${pTheme.borderActive}`
                             : `1.2px solid ${pTheme.borderNormal}`,
                         borderLeft: `5px solid ${pTheme.accent}`,
                         borderRadius: 14,
                         overflow: "hidden",
-                        boxShadow: selectedInDistrictCount > 0 ? `0 3px 10px ${pTheme.borderNormal}` : "0 1.5px 4px rgba(0,0,0,0.03)",
+                        boxShadow: isAnySelectedInDist ? `0 3px 10px ${pTheme.borderNormal}` : "0 1.5px 4px rgba(0,0,0,0.03)",
                         transition: "all 0.15s ease",
                       }}
                     >
@@ -7947,7 +7950,7 @@ function MultiLocSheet({
                         style={{
                           padding: "10px 12px",
                           background:
-                            selectedInDistrictCount > 0
+                            isAnySelectedInDist
                               ? pTheme.selectedBg
                               : `linear-gradient(135deg, ${pTheme.cardTint} 0%, #FFFFFF 100%)`,
                           display: "flex",
@@ -7974,7 +7977,7 @@ function MultiLocSheet({
                                 fontSize: 13,
                                 fontWeight: 800,
                                 color:
-                                  selectedInDistrictCount > 0
+                                  isAnySelectedInDist
                                     ? pTheme.accent
                                     : "#183B34",
                                 fontFamily: lang === "ur" ? URDU_FONT : "inherit",
@@ -7994,10 +7997,14 @@ function MultiLocSheet({
                               {mandiList.length === 1
                                 ? (lang === "ur" ? "منڈی" : "Mandi")
                                 : (lang === "ur" ? "منڈیاں" : "Mandis")}
-                              {selectedInDistrictCount > 0 &&
+                              {isThisDistSelected &&
                                 (lang === "ur"
-                                  ? ` · ${selectedInDistrictCount} منتخب`
-                                  : ` · ${selectedInDistrictCount} Selected`)}
+                                  ? ` · پورا ضلع منتخب`
+                                  : ` · District Selected`)}
+                              {selectedMandiInDist &&
+                                (lang === "ur"
+                                  ? ` · ${tmL(selectedMandiInDist)} منتخب`
+                                  : ` · ${selectedMandiInDist} Selected`)}
                             </div>
                           </div>
                         </div>
@@ -8009,35 +8016,33 @@ function MultiLocSheet({
                             gap: 8,
                           }}
                         >
-                          {/* Select All in District Button */}
-                          {mandiList.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleSelectAllInDistrict(d, mandiList);
-                              }}
-                              style={{
-                                fontSize: lang === "ur" ? 11 : 10,
-                                fontWeight: 800,
-                                color: allInDistrictSelected
-                                  ? "#FFFFFF"
-                                  : pTheme.accent,
-                                background: allInDistrictSelected
-                                  ? pTheme.accent
-                                  : pTheme.badgeBg,
-                                border: `1px solid ${pTheme.accent}`,
-                                padding: "3px 8px",
-                                borderRadius: 6,
-                                cursor: "pointer",
-                                fontFamily: lang === "ur" ? URDU_FONT : "inherit",
-                              }}
-                            >
-                              {allInDistrictSelected
-                                ? (lang === "ur" ? "✓ سب منتخب" : "✓ All Selected")
-                                : (lang === "ur" ? "سب منتخب کریں" : "Select All")}
-                            </button>
-                          )}
+                          {/* Single District Select Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleDistrict(d);
+                            }}
+                            style={{
+                              fontSize: lang === "ur" ? 11 : 10,
+                              fontWeight: 800,
+                              color: isThisDistSelected
+                                ? "#FFFFFF"
+                                : pTheme.accent,
+                              background: isThisDistSelected
+                                ? pTheme.accent
+                                : pTheme.badgeBg,
+                              border: `1px solid ${pTheme.accent}`,
+                              padding: "3px 8px",
+                              borderRadius: 6,
+                              cursor: "pointer",
+                              fontFamily: lang === "ur" ? URDU_FONT : "inherit",
+                            }}
+                          >
+                            {isThisDistSelected
+                              ? (lang === "ur" ? "✓ منتخب" : "✓ Selected")
+                              : (lang === "ur" ? "ضلع منتخب کریں" : "Select District")}
+                          </button>
 
                           {/* Accordion Expand / Collapse Indicator */}
                           <span
@@ -8107,9 +8112,9 @@ function MultiLocSheet({
                                   style={{
                                     width: 18,
                                     height: 18,
-                                    borderRadius: 4,
+                                    borderRadius: "50%",
                                     border: isSelected
-                                      ? `1.5px solid ${pTheme.accent}`
+                                      ? `2px solid ${pTheme.accent}`
                                       : `1.5px solid ${pTheme.borderNormal}`,
                                     background: isSelected
                                       ? pTheme.accent
@@ -9029,8 +9034,8 @@ function RatesResultScreen({
       priceMax: r.max,
       unit: "40 kg",
       arrivalCount: r.arrival,
-      arrivalUnit: "",
-      arrivalUnitUrdu: "",
+      arrivalUnit: "Bags",
+      arrivalUnitUrdu: "تھیلے",
       colorUrdu: "سفید",
       color: "White",
       rateType: r.rateType,
@@ -11610,8 +11615,8 @@ function ProductRatesScreen({
                             >
                               {statArrival > 0
                                 ? (lang === "ur"
-                                  ? `${toUrduDigits(statArrival.toLocaleString())}`
-                                  : statArrival.toLocaleString())
+                                  ? `${toUrduDigits(statArrival.toLocaleString())} تھیلے`
+                                  : `${statArrival.toLocaleString()} Bags`)
                                 : "—"}
                             </span>
                           </div>
@@ -12940,6 +12945,46 @@ function ProductRatesScreen({
                               >
                                 {lang === "ur" ? "خصوصیت" : "Specification"}
                               </th>
+
+                              {/* 11. Moisture */}
+                              <th
+                                style={{
+                                  padding: "7px 4px",
+                                  textAlign: "center",
+                                  fontWeight: 800,
+                                  fontSize: lang === "ur" ? 13 : 10,
+                                  color: "#80918B",
+                                  textTransform: "uppercase",
+                                  borderBottom: "1.5px solid #D5E2DD",
+                                  minWidth: 64,
+                                  fontFamily:
+                                    lang === "ur"
+                                      ? URDU_FONT
+                                      : "inherit",
+                                }}
+                              >
+                                {lang === "ur" ? "نمی" : "Moisture"}
+                              </th>
+
+                              {/* 12. Origin */}
+                              <th
+                                style={{
+                                  padding: "7px 4px",
+                                  textAlign: "center",
+                                  fontWeight: 800,
+                                  fontSize: lang === "ur" ? 13 : 10,
+                                  color: "#80918B",
+                                  textTransform: "uppercase",
+                                  borderBottom: "1.5px solid #D5E2DD",
+                                  minWidth: 70,
+                                  fontFamily:
+                                    lang === "ur"
+                                      ? URDU_FONT
+                                      : "inherit",
+                                }}
+                              >
+                                {lang === "ur" ? "ماخذ" : "Origin"}
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
@@ -12961,12 +13006,34 @@ function ProductRatesScreen({
                               let intervalTrend: "up" | "down" | "stable" = "stable";
 
                               if (isDateInRange && dateIdx >= 0) {
-                                rowMin = rowTimeline.mins[dateIdx] ?? 0;
-                                rowMax = rowTimeline.maxs[dateIdx] ?? 0;
-                                rowArr = rowTimeline.arrivals[dateIdx] ?? 0;
-
                                 const pSeries = rowTimeline.prices;
                                 const pLatest = pSeries[dateIdx] ?? 0;
+
+                                const lookbackDays =
+                                  tableTrendInterval === "72h"
+                                    ? 3
+                                    : tableTrendInterval === "weekly"
+                                      ? 7
+                                      : tableTrendInterval === "monthly"
+                                        ? 30
+                                        : 1;
+
+                                const startIdx = Math.max(0, dateIdx - lookbackDays + 1);
+                                const endIdx = dateIdx + 1;
+
+                                const minSlice = rowTimeline.mins.slice(startIdx, endIdx).filter((v) => v > 0);
+                                const maxSlice = rowTimeline.maxs.slice(startIdx, endIdx).filter((v) => v > 0);
+                                const arrSlice = rowTimeline.arrivals.slice(startIdx, endIdx);
+
+                                if (lookbackDays === 1) {
+                                  rowMin = rowTimeline.mins[dateIdx] ?? 0;
+                                  rowMax = rowTimeline.maxs[dateIdx] ?? 0;
+                                  rowArr = rowTimeline.arrivals[dateIdx] ?? 0;
+                                } else {
+                                  rowMin = minSlice.length > 0 ? Math.min(...minSlice) : (rowTimeline.mins[dateIdx] ?? 0);
+                                  rowMax = maxSlice.length > 0 ? Math.max(...maxSlice) : (rowTimeline.maxs[dateIdx] ?? 0);
+                                  rowArr = arrSlice.reduce((a, b) => a + b, 0);
+                                }
 
                                 const pPrev =
                                   tableTrendInterval === "72h"
@@ -13250,13 +13317,55 @@ function ProductRatesScreen({
                                     >
                                       {r.spec || "—"}
                                     </td>
+
+                                    {/* 11. Moisture */}
+                                    <td
+                                      style={{
+                                        padding: "7px 4px",
+                                        textAlign: "center",
+                                        color: "#52635F",
+                                        fontWeight: 600,
+                                        fontSize: 10,
+                                        whiteSpace: "nowrap",
+                                        fontFamily:
+                                          lang === "ur"
+                                            ? URDU_FONT
+                                            : "inherit",
+                                      }}
+                                    >
+                                      {r.moisture
+                                        ? (lang === "ur"
+                                          ? `${toUrduDigits(r.moisture)}${r.moisture.includes("٪") || r.moisture.includes("%") ? "" : "٪"}`
+                                          : `${r.moisture}${r.moisture.includes("%") ? "" : "%"}`)
+                                        : "—"}
+                                    </td>
+
+                                    {/* 12. Origin */}
+                                    <td
+                                      style={{
+                                        padding: "7px 4px",
+                                        textAlign: "center",
+                                        color: "#52635F",
+                                        fontWeight: 600,
+                                        fontSize: 10,
+                                        whiteSpace: "nowrap",
+                                        fontFamily:
+                                          lang === "ur"
+                                            ? URDU_FONT
+                                            : "inherit",
+                                      }}
+                                    >
+                                      {r.origin
+                                        ? (AUTO_URDU_DICT[r.origin] || tm(r.origin) || (lang === "ur" ? t(r.origin) : r.origin) || r.origin)
+                                        : "—"}
+                                    </td>
                                   </tr>
 
                                   {/* Inline Expandable Trend Graph Row directly below this clicked row */}
                                   {isRowModalActive && (
                                     <tr>
                                       <td
-                                        colSpan={10}
+                                        colSpan={12}
                                         className="p-0 border-b-2 border-[#10B981]"
                                         style={{
                                           background: "#F4FAF7",
@@ -14237,6 +14346,8 @@ function ProductRatesScreen({
                   Variety: lang === "ur" ? "قسم" : "Variety",
                   Condition: lang === "ur" ? "حالت" : "Condition",
                   Specification: lang === "ur" ? "خصوصیت" : "Specification",
+                  Moisture: lang === "ur" ? "نمی" : "Moisture",
+                  Origin: lang === "ur" ? "ماخذ" : "Origin",
                 };
                 const colState: Record<string, string | null> = {
                   Quality: dtQuality,
@@ -14500,6 +14611,8 @@ function ProductRatesScreen({
                                 "Variety",
                                 "Condition",
                                 "Specification",
+                                "Moisture",
+                                "Origin",
                               ].map((col) => {
                                 const hasFilter = col in colOpts;
                                 const activeVal = colState[col];
@@ -14684,7 +14797,7 @@ function ProductRatesScreen({
                             {filteredTableRows.length === 0 ? (
                               <tr>
                                 <td
-                                  colSpan={10}
+                                  colSpan={12}
                                   style={{
                                     padding: "24px",
                                     textAlign: "center",
@@ -14720,6 +14833,8 @@ function ProductRatesScreen({
                                 const rowSpec = r.spec || dtSpec || attrSpec || "—";
                                 const rowCond =
                                   r.condition || r.quality || dtCondition || attrCondition || "—";
+                                const rowMoisture = r.moisture || attrMoisture || "";
+                                const rowOrigin = r.origin || "";
                                 const rtColor = RATE_COLORS[r.rateType] || "#075E4F";
                                 const rowBg = i % 2 === 0 ? "#fff" : "#F1F7F4";
 
@@ -14858,7 +14973,11 @@ function ProductRatesScreen({
                                         fontSize: lang === "ur" ? 13 : 10.5,
                                       }}
                                     >
-                                      {r.arrival || "—"}
+                                      {r.arrival && r.arrival !== "—"
+                                        ? (String(r.arrival).toLowerCase().includes("bag") || String(r.arrival).includes("تھیلے")
+                                          ? r.arrival
+                                          : `${r.arrival} ${lang === "ur" ? "تھیلے" : "Bags"}`)
+                                        : "—"}
                                     </td>
 
                                     {/* 7. Color */}
@@ -14932,6 +15051,44 @@ function ProductRatesScreen({
                                       {lang === "ur"
                                         ? t(rowSpec) || rowSpec || "—"
                                         : rowSpec || "—"}
+                                    </td>
+
+                                    {/* 11. Moisture */}
+                                    <td
+                                      style={{
+                                        padding: "7px 8px",
+                                        color: "#2F4A43",
+                                        textAlign: "center",
+                                        fontSize: lang === "ur" ? 13 : 10.5,
+                                        fontFamily:
+                                          lang === "ur"
+                                            ? URDU_FONT
+                                            : "inherit",
+                                      }}
+                                    >
+                                      {rowMoisture
+                                        ? (lang === "ur"
+                                          ? `${toUrduDigits(rowMoisture)}${rowMoisture.includes("٪") || rowMoisture.includes("%") ? "" : "٪"}`
+                                          : `${rowMoisture}${rowMoisture.includes("%") ? "" : "%"}`)
+                                        : "—"}
+                                    </td>
+
+                                    {/* 12. Origin */}
+                                    <td
+                                      style={{
+                                        padding: "7px 8px",
+                                        color: "#2F4A43",
+                                        textAlign: "center",
+                                        fontSize: lang === "ur" ? 13 : 10.5,
+                                        fontFamily:
+                                          lang === "ur"
+                                            ? URDU_FONT
+                                            : "inherit",
+                                      }}
+                                    >
+                                      {rowOrigin
+                                        ? (AUTO_URDU_DICT[rowOrigin] || tm(rowOrigin) || (lang === "ur" ? t(rowOrigin) : rowOrigin) || rowOrigin)
+                                        : "—"}
                                     </td>
                                   </tr>
                                 );
@@ -15807,8 +15964,27 @@ function ProductRatesScreen({
           onApply={(locs) => {
             if (locs.length === 0 || locs.some((x) => x.kind === "pakistan")) {
               setLocScope({ kind: "pakistan", label: "All Pakistan" });
+              setTableProvinceFilter(null);
             } else {
-              setLocScope(locs[0]);
+              const sel = locs[0];
+              setLocScope(sel);
+              if (sel.kind === "province") {
+                setTableProvinceFilter(sel.label);
+              } else if (sel.kind === "mandi") {
+                const mandiObj = INITIAL_MANDIS.find(
+                  (m) =>
+                    m.name.toLowerCase().includes(sel.label.toLowerCase()) ||
+                    sel.label.toLowerCase().includes(m.name.toLowerCase()) ||
+                    m.city.toLowerCase().includes(sel.label.toLowerCase()),
+                );
+                if (mandiObj?.province) {
+                  setTableProvinceFilter(mandiObj.province);
+                } else {
+                  setTableProvinceFilter(null);
+                }
+              } else {
+                setTableProvinceFilter(null);
+              }
             }
             setLocSheet(false);
           }}
