@@ -6006,24 +6006,26 @@ function DatePickerSheet({
   );
 }
 
-// ─── HIGH PERFORMANCE BY-PRODUCT NATIONAL SUMMARY CALCULATION ENGINE ────────
+// ─── CATALOG ATTRIBUTE POLICY & HIGH PERFORMANCE CALCULATION ENGINE ─────────
 
-export interface SpecialAttrInfo {
-  type: 'moisture' | 'newOld' | 'variety' | 'spec' | 'quality';
+export interface SpecialAttrItem {
+  type: 'moisture' | 'newOld' | 'color' | 'variety' | 'spec' | 'origin' | 'quality' | 'multi';
   labelEn: string;
   labelUr: string;
   valueEn: string;
   valueUr: string;
   dotColor?: string;
+  filterFn: (r: RichRow) => boolean;
 }
 
 export interface SpecialAttrInfo {
-  type: 'moisture' | 'newOld' | 'variety' | 'spec' | 'quality';
+  type: 'moisture' | 'newOld' | 'color' | 'variety' | 'spec' | 'origin' | 'quality' | 'multi';
   labelEn: string;
   labelUr: string;
   valueEn: string;
   valueUr: string;
   dotColor?: string;
+  filterFn?: (r: RichRow) => boolean;
 }
 
 export interface ByproductNationalStats {
@@ -6039,6 +6041,280 @@ export interface ByproductNationalStats {
   markets: number;
   specialAttr: SpecialAttrInfo | null;
 }
+
+// Fixed catalog rules from Zarai Mandi Mandatory & Optional Attributes Policy
+const CATALOG_POLICY_RULES: Record<
+  string,
+  {
+    type: SpecialAttrInfo['type'];
+    labelEn: string;
+    labelUr: string;
+    valueEn: string;
+    valueUr: string;
+    dotColor: string;
+    filterFn: (r: RichRow) => boolean;
+  }
+> = {
+  // Maize
+  "Maize Grade A": {
+    type: "moisture",
+    labelEn: "Moisture",
+    labelUr: "نمی",
+    valueEn: "11-14%",
+    valueUr: "۱۱-۱۴٪",
+    dotColor: "#38BDF8",
+    filterFn: (r) => {
+      const m = (r.moisture || "").toLowerCase();
+      return m.includes("11") || m.includes("12") || m.includes("13") || m.includes("14") || m.includes("11-14");
+    },
+  },
+  "Maize Grade B": {
+    type: "multi",
+    labelEn: "Moisture · Type",
+    labelUr: "نمی • معیار",
+    valueEn: "14-16% · New",
+    valueUr: "۱۴-۱۶٪ • نیا",
+    dotColor: "#38BDF8",
+    filterFn: (r) => {
+      const m = (r.moisture || "").toLowerCase();
+      const no = (r.newOld || "").toLowerCase();
+      return (m.includes("14") || m.includes("15") || m.includes("16") || m.includes("14-16")) && (!no || no.includes("new"));
+    },
+  },
+  "Maize Grade C": {
+    type: "multi",
+    labelEn: "Moisture · Type",
+    labelUr: "نمی • معیار",
+    valueEn: "16-18% · New",
+    valueUr: "۱۶-۱۸٪ • نیا",
+    dotColor: "#38BDF8",
+    filterFn: (r) => {
+      const m = (r.moisture || "").toLowerCase();
+      const no = (r.newOld || "").toLowerCase();
+      return (m.includes("16") || m.includes("17") || m.includes("18") || m.includes("16-18")) && (!no || no.includes("new"));
+    },
+  },
+  "Popcorn": {
+    type: "newOld",
+    labelEn: "Type",
+    labelUr: "معیار",
+    valueEn: "New",
+    valueUr: "نیا",
+    dotColor: "#F59E0B",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+
+  // Millet
+  "Millet Grade B": {
+    type: "color",
+    labelEn: "Color",
+    labelUr: "رنگ",
+    valueEn: "Yellow",
+    valueUr: "پیلا",
+    dotColor: "#FBBF24",
+    filterFn: (r) => (r.color || "").toLowerCase().includes("yellow") || (r.color || "").toLowerCase().includes("peela"),
+  },
+
+  // Cotton
+  "Seed Cotton Grade B": {
+    type: "color",
+    labelEn: "Color",
+    labelUr: "رنگ",
+    valueEn: "White",
+    valueUr: "سفید",
+    dotColor: "#E2E8F0",
+    filterFn: (r) => (r.color || "").toLowerCase().includes("white") || (r.color || "").toLowerCase().includes("safaid"),
+  },
+  "Seed Cotton Grade C": {
+    type: "color",
+    labelEn: "Color",
+    labelUr: "رنگ",
+    valueEn: "White",
+    valueUr: "سفید",
+    dotColor: "#E2E8F0",
+    filterFn: (r) => (r.color || "").toLowerCase().includes("white") || (r.color || "").toLowerCase().includes("safaid"),
+  },
+
+  // Paddy
+  "Paddy 1509": {
+    type: "newOld",
+    labelEn: "Type",
+    labelUr: "معیار",
+    valueEn: "New",
+    valueUr: "نیا",
+    dotColor: "#F59E0B",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+  "Paddy 1692": {
+    type: "multi",
+    labelEn: "Moisture · Type",
+    labelUr: "نمی • معیار",
+    valueEn: "11-14% · New",
+    valueUr: "۱۱-۱۴٪ • نیا",
+    dotColor: "#38BDF8",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+  "Paddy 1718": {
+    type: "newOld",
+    labelEn: "Type",
+    labelUr: "معیار",
+    valueEn: "New",
+    valueUr: "نیا",
+    dotColor: "#F59E0B",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+  "Paddy 1847": {
+    type: "newOld",
+    labelEn: "Type",
+    labelUr: "معیار",
+    valueEn: "New",
+    valueUr: "نیا",
+    dotColor: "#F59E0B",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+  "Paddy 86": {
+    type: "multi",
+    labelEn: "Moisture · Type",
+    labelUr: "نمی • معیار",
+    valueEn: "11-14% · New",
+    valueUr: "۱۱-۱۴٪ • نیا",
+    dotColor: "#38BDF8",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+  "Paddy Kainat 1121": {
+    type: "newOld",
+    labelEn: "Type",
+    labelUr: "معیار",
+    valueEn: "New",
+    valueUr: "نیا",
+    dotColor: "#F59E0B",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+  "Paddy Super": {
+    type: "multi",
+    labelEn: "Moisture · Type",
+    labelUr: "نمی • معیار",
+    valueEn: "11-14% · New",
+    valueUr: "۱۱-۱۴٪ • نیا",
+    dotColor: "#38BDF8",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+  "Paddy Supri": {
+    type: "multi",
+    labelEn: "Moisture · Type",
+    labelUr: "نمی • معیار",
+    valueEn: "11-14% · New",
+    valueUr: "۱۱-۱۴٪ • نیا",
+    dotColor: "#38BDF8",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+
+  // Spices
+  "Red Longi Chilli": {
+    type: "spec",
+    labelEn: "Spec",
+    labelUr: "تفصیل",
+    valueEn: "Dry",
+    valueUr: "خشک",
+    dotColor: "#EF4444",
+    filterFn: (r) => (r.spec || "").toLowerCase().includes("dry") || (r.variety || "").toLowerCase().includes("dry"),
+  },
+  "Red Rich Star Chilli": {
+    type: "spec",
+    labelEn: "Spec",
+    labelUr: "تفصیل",
+    valueEn: "Dry",
+    valueUr: "خشک",
+    dotColor: "#EF4444",
+    filterFn: (r) => (r.spec || "").toLowerCase().includes("dry") || (r.variety || "").toLowerCase().includes("dry"),
+  },
+  "Red Desi Chilli": {
+    type: "spec",
+    labelEn: "Spec",
+    labelUr: "تفصیل",
+    valueEn: "Dry",
+    valueUr: "خشک",
+    dotColor: "#EF4444",
+    filterFn: (r) => (r.spec || "").toLowerCase().includes("dry") || (r.variety || "").toLowerCase().includes("dry"),
+  },
+
+  // Fruits
+  "Kala Kullu Apple": {
+    type: "origin",
+    labelEn: "Origin",
+    labelUr: "علاقہ",
+    valueEn: "Balochistan",
+    valueUr: "بلوچستان",
+    dotColor: "#10B981",
+    filterFn: (r) => (r.province || "").toLowerCase().includes("baloch") || (r.origin || "").toLowerCase().includes("baloch"),
+  },
+  "Mausambi": {
+    type: "origin",
+    labelEn: "Origin",
+    labelUr: "علاقہ",
+    valueEn: "Punjab",
+    valueUr: "پنجاب",
+    dotColor: "#10B981",
+    filterFn: (r) => (r.province || "").toLowerCase().includes("punjab") || (r.origin || "").toLowerCase().includes("punjab"),
+  },
+  "Grape Fruit": {
+    type: "origin",
+    labelEn: "Origin",
+    labelUr: "علاقہ",
+    valueEn: "Punjab",
+    valueUr: "پنجاب",
+    dotColor: "#10B981",
+    filterFn: (r) => (r.province || "").toLowerCase().includes("punjab") || (r.origin || "").toLowerCase().includes("punjab"),
+  },
+  "Fruiter": {
+    type: "origin",
+    labelEn: "Origin",
+    labelUr: "علاقہ",
+    valueEn: "Bhalwal",
+    valueUr: "بھلوال",
+    dotColor: "#10B981",
+    filterFn: (r) => (r.mandiCity || "").toLowerCase().includes("bhalwal") || (r.origin || "").toLowerCase().includes("bhalwal"),
+  },
+
+  // Vegetables
+  "Turnip": {
+    type: "origin",
+    labelEn: "Origin",
+    labelUr: "علاقہ",
+    valueEn: "Punjab",
+    valueUr: "پنجاب",
+    dotColor: "#10B981",
+    filterFn: (r) => (r.province || "").toLowerCase().includes("punjab"),
+  },
+  "Tomato Grade B": {
+    type: "newOld",
+    labelEn: "Type",
+    labelUr: "معیار",
+    valueEn: "New",
+    valueUr: "نیا",
+    dotColor: "#F59E0B",
+    filterFn: (r) => (r.newOld || "").toLowerCase().includes("new"),
+  },
+};
+
+// Items registered in the policy PDF as 'None established' / 'None observed as partial'
+const NO_ATTRIBUTE_BYPRODUCTS = new Set([
+  "Barley", "Bran", "Flour", "Flour Special", "Special Flour", "Oat", "Refined Flour", "Fine Flour", "Semolina", "Straw",
+  "Cotton Seed", "Cotton Seed Cake", "Cotton Seed Oil", "Lint Cotton",
+  "Alfalfa", "Black Dry Dates Cutter", "Channa Atti", "Corn Silage", "Elephant Grass", "Fodder - Green Grass",
+  "Jantar", "Limestone", "Lucerne Fodder", "Maize Fodder", "Masha Katta", "Masoor Katta", "Moong Katta",
+  "Mustard Seed Cake", "Rhode Grass", "Rice Polish", "Soyabean Meal", "Wanda", "Wheat Bran", "Wheat Husk", "Wheat Poridge",
+  "Asia Ghee", "Dalda Ghee", "Kashmir Ghee", "Khyber Ghee", "Sufi Ghee",
+  "Ammonium Sulphate", "Amonium Nitrate", "CAN", "Chlorphenapyr", "Clothianidin", "DAP", "Enrich", "Green Phosphate",
+  "MOP", "NP", "NPK", "Pak Arab CAN", "Pak Arab Guara", "S-metolachlor", "SOP-G", "SSP", "TSP", "UREA", "Zabardast Urea",
+  "Zarkhez", "Zinc", "Zinc Sulphate",
+  "Almond", "Cashew", "Coconut Powder", "Coconut Whole", "Fig", "Pistachio", "Raisin", "Walnut",
+  "Ajwain", "Chia Seed", "Dry Lemon", "Hing", "Honey", "Ispaghol", "Ispaghol Husk", "Kalonji", "Kalonji Oil", "Salab Misri", "Saleb Panja", "Saunf", "Tukh Malanga", "Zafran",
+  "Arugula Oil", "Arugula Seed", "Canola Meal", "Canola Oil", "Castor Bean", "Soyabean Oil", "Soyabean Oil Washed", "Camelina", "Sunflower Oil", "Sunflower Seed",
+  "1121 Basmati-2", "1121 Kacha", "1121 Steam", "1121 White", "1509 Kacha", "1509 Sella", "1509 Steam", "1509 Steam Basmati", "1509 White",
+  "386 Basmati-New", "386 Basmati-Old", "Irri 6", "Irri 6 Sabut-1", "Irri Tota", "Kainat Double Steam", "Lal 386 New", "Lal 386 Old",
+  "Punia 1121-1", "Punia 1121-2", "Punia Basmati-1", "Rice Husk", "Sella 1121-1", "Sella Punjab", "Short Grain (Tota)", "Silky", "Silky & Sortex", "Super Basmati Sindh", "Super Kernel", "Supri New", "Supri Sila", "Tota Basmati"
+]);
 
 export function calculateByproductSummary(
   targetProduct: string,
@@ -6101,68 +6377,59 @@ export function calculateByproductSummary(
     (r) => (r.rateType || 'Mandi Rate') === mostOccurringRateType
   );
 
-  const validMins = rtRows
-    .map((r) => r.min)
-    .filter((v) => typeof v === 'number' && v > 0);
-  const validMaxs = rtRows
-    .map((r) => r.max)
-    .filter((v) => typeof v === 'number' && v > 0);
-  const avgMin = validMins.length
-    ? Math.round(validMins.reduce((a, b) => a + b, 0) / validMins.length)
-    : 0;
-  const avgMax = validMaxs.length
-    ? Math.round(validMaxs.reduce((a, b) => a + b, 0) / validMaxs.length)
-    : 0;
-
-  let totalArrival = 0;
-  for (let i = 0; i < rtRows.length; i++) {
-    const a = rtRows[i].arrival;
-    if (typeof a === 'number') {
-      totalArrival += a;
-    } else if (typeof a === 'string') {
-      const m = a.match(/^([0-9,]+)/);
-      if (m) totalArrival += parseInt(m[1].replace(/,/g, ''), 10) || 0;
-    }
-  }
-
-  const markets = new Set(rtRows.map((r) => r.mandiName || r.mandiCity)).size;
-
-  // Extract real dominant special attribute (priority: moisture -> new/old -> variety -> spec)
+  // 1. Check fixed policy rule
   let specialAttr: SpecialAttrInfo | null = null;
-
-  // 1. Moisture (e.g. Maize, Mustard Seed)
-  const moistureCounts: Record<string, number> = {};
-  for (let i = 0; i < rtRows.length; i++) {
-    const m = rtRows[i].moisture;
-    if (m && typeof m === 'string' && m.trim()) {
-      moistureCounts[m.trim()] = (moistureCounts[m.trim()] || 0) + 1;
-    }
-  }
-  const sortedMoistures = Object.entries(moistureCounts).sort((a, b) => b[1] - a[1]);
-  if (sortedMoistures.length > 0) {
-    const val = sortedMoistures[0][0];
+  const policyRule = CATALOG_POLICY_RULES[targetByproduct] || CATALOG_POLICY_RULES[`${targetProduct} ${targetByproduct}`];
+  if (policyRule) {
     specialAttr = {
-      type: 'moisture',
-      labelEn: 'Moisture',
-      labelUr: 'نمی',
-      valueEn: String(val).includes('%') ? String(val) : String(val) + '%',
-      valueUr: String(val).includes('٪') ? toUrduDigits(val) : toUrduDigits(val) + '٪',
-      dotColor: '#38BDF8',
+      type: policyRule.type,
+      labelEn: policyRule.labelEn,
+      labelUr: policyRule.labelUr,
+      valueEn: policyRule.valueEn,
+      valueUr: policyRule.valueUr,
+      dotColor: policyRule.dotColor,
+      filterFn: policyRule.filterFn,
     };
-  }
-
-  // 2. New / Old (e.g. Wheat, Cotton, Rice, Potato, Onion, Canola Seed)
-  if (!specialAttr) {
+  } else if (!NO_ATTRIBUTE_BYPRODUCTS.has(targetByproduct)) {
+    // 2. Discover dominant observed attribute for items with partial attributes
+    // Priority: Moisture -> New/Old -> Color -> Variety -> Spec -> Origin
+    const moistureCounts: Record<string, number> = {};
     const newOldCounts: Record<string, number> = {};
+    const colorCounts: Record<string, number> = {};
+    const varietyCounts: Record<string, number> = {};
+    const specCounts: Record<string, number> = {};
+    const originCounts: Record<string, number> = {};
+
     for (let i = 0; i < rtRows.length; i++) {
-      const no = rtRows[i].newOld;
-      if (no && typeof no === 'string' && no.trim()) {
-        newOldCounts[no.trim()] = (newOldCounts[no.trim()] || 0) + 1;
-      }
+      const r = rtRows[i];
+      if (r.moisture && r.moisture.trim()) moistureCounts[r.moisture.trim()] = (moistureCounts[r.moisture.trim()] || 0) + 1;
+      if (r.newOld && r.newOld.trim()) newOldCounts[r.newOld.trim()] = (newOldCounts[r.newOld.trim()] || 0) + 1;
+      if (r.color && r.color.trim()) colorCounts[r.color.trim()] = (colorCounts[r.color.trim()] || 0) + 1;
+      if (r.variety && r.variety.trim()) varietyCounts[r.variety.trim()] = (varietyCounts[r.variety.trim()] || 0) + 1;
+      if (r.spec && r.spec.trim()) specCounts[r.spec.trim()] = (specCounts[r.spec.trim()] || 0) + 1;
+      if (r.origin && r.origin.trim()) originCounts[r.origin.trim()] = (originCounts[r.origin.trim()] || 0) + 1;
     }
-    const sortedNewOld = Object.entries(newOldCounts).sort((a, b) => b[1] - a[1]);
-    if (sortedNewOld.length > 0) {
-      const val = sortedNewOld[0][0];
+
+    const sortedM = Object.entries(moistureCounts).sort((a, b) => b[1] - a[1]);
+    const sortedNO = Object.entries(newOldCounts).sort((a, b) => b[1] - a[1]);
+    const sortedC = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]);
+    const sortedV = Object.entries(varietyCounts).sort((a, b) => b[1] - a[1]);
+    const sortedSp = Object.entries(specCounts).sort((a, b) => b[1] - a[1]);
+    const sortedOrg = Object.entries(originCounts).sort((a, b) => b[1] - a[1]);
+
+    if (sortedM.length > 0) {
+      const val = sortedM[0][0];
+      specialAttr = {
+        type: 'moisture',
+        labelEn: 'Moisture',
+        labelUr: 'نمی',
+        valueEn: val.includes('%') ? val : val + '%',
+        valueUr: val.includes('٪') ? toUrduDigits(val) : toUrduDigits(val) + '٪',
+        dotColor: '#38BDF8',
+        filterFn: (r) => (r.moisture || '').trim() === val,
+      };
+    } else if (sortedNO.length > 0) {
+      const val = sortedNO[0][0];
       const isNew = val.toLowerCase().includes('new');
       specialAttr = {
         type: 'newOld',
@@ -6171,22 +6438,28 @@ export function calculateByproductSummary(
         valueEn: isNew ? 'New' : 'Old',
         valueUr: isNew ? 'نیا' : 'پرانا',
         dotColor: '#F59E0B',
+        filterFn: (r) => (r.newOld || '').toLowerCase().includes(isNew ? 'new' : 'old'),
       };
-    }
-  }
-
-  // 3. Variety (e.g. Chillies, Garlic)
-  if (!specialAttr) {
-    const varietyCounts: Record<string, number> = {};
-    for (let i = 0; i < rtRows.length; i++) {
-      const v = rtRows[i].variety;
-      if (v && typeof v === 'string' && v.trim()) {
-        varietyCounts[v.trim()] = (varietyCounts[v.trim()] || 0) + 1;
-      }
-    }
-    const sortedVariety = Object.entries(varietyCounts).sort((a, b) => b[1] - a[1]);
-    if (sortedVariety.length > 0) {
-      const val = sortedVariety[0][0];
+    } else if (sortedC.length > 0) {
+      const val = sortedC[0][0];
+      const colorUrduMap: Record<string, string> = {
+        Brown: "براؤن",
+        Golden: "سنہرا",
+        White: "سفید",
+        Yellow: "پیلا",
+        Red: "سرخ",
+      };
+      specialAttr = {
+        type: 'color',
+        labelEn: 'Color',
+        labelUr: 'رنگ',
+        valueEn: val,
+        valueUr: colorUrduMap[val] || val,
+        dotColor: '#FBBF24',
+        filterFn: (r) => (r.color || '').trim().toLowerCase() === val.toLowerCase(),
+      };
+    } else if (sortedV.length > 0) {
+      const val = sortedV[0][0];
       specialAttr = {
         type: 'variety',
         labelEn: 'Variety',
@@ -6194,22 +6467,10 @@ export function calculateByproductSummary(
         valueEn: val,
         valueUr: val,
         dotColor: '#10B981',
+        filterFn: (r) => (r.variety || '').trim() === val,
       };
-    }
-  }
-
-  // 4. Spec (e.g. Dry)
-  if (!specialAttr) {
-    const specCounts: Record<string, number> = {};
-    for (let i = 0; i < rtRows.length; i++) {
-      const sp = rtRows[i].spec;
-      if (sp && typeof sp === 'string' && sp.trim()) {
-        specCounts[sp.trim()] = (specCounts[sp.trim()] || 0) + 1;
-      }
-    }
-    const sortedSpec = Object.entries(specCounts).sort((a, b) => b[1] - a[1]);
-    if (sortedSpec.length > 0) {
-      const val = sortedSpec[0][0];
+    } else if (sortedSp.length > 0) {
+      const val = sortedSp[0][0];
       specialAttr = {
         type: 'spec',
         labelEn: 'Spec',
@@ -6217,9 +6478,71 @@ export function calculateByproductSummary(
         valueEn: val,
         valueUr: val,
         dotColor: '#10B981',
+        filterFn: (r) => (r.spec || '').trim() === val,
+      };
+    } else if (sortedOrg.length > 0) {
+      const val = sortedOrg[0][0];
+      specialAttr = {
+        type: 'origin',
+        labelEn: 'Origin',
+        labelUr: 'علاقہ',
+        valueEn: val,
+        valueUr: val,
+        dotColor: '#10B981',
+        filterFn: (r) => (r.origin || '').trim() === val,
       };
     }
   }
+
+  // Filter rows strictly to the displayed attribute combination for 100% calculation consistency
+  let eligibleRows = rtRows;
+  if (specialAttr && specialAttr.filterFn) {
+    const filtered = rtRows.filter(specialAttr.filterFn);
+    if (filtered.length > 0) {
+      eligibleRows = filtered;
+    }
+  }
+
+  // Section 3: Market-balanced average min & max calculation
+  const marketMap: Record<string, { mins: number[]; maxs: number[] }> = {};
+  for (let i = 0; i < eligibleRows.length; i++) {
+    const r = eligibleRows[i];
+    const mKey = r.mandiName || r.mandiCity || 'Mandi';
+    if (!marketMap[mKey]) marketMap[mKey] = { mins: [], maxs: [] };
+    if (typeof r.min === 'number' && r.min > 0) marketMap[mKey].mins.push(r.min);
+    if (typeof r.max === 'number' && r.max > 0) marketMap[mKey].maxs.push(r.max);
+  }
+
+  const marketKeys = Object.keys(marketMap);
+  const marketAverages = marketKeys
+    .map((k) => {
+      const mObj = marketMap[k];
+      const avgMin = mObj.mins.length ? mObj.mins.reduce((a, b) => a + b, 0) / mObj.mins.length : 0;
+      const avgMax = mObj.maxs.length ? mObj.maxs.reduce((a, b) => a + b, 0) / mObj.maxs.length : 0;
+      return { avgMin, avgMax };
+    })
+    .filter((m) => m.avgMin > 0 && m.avgMax > 0);
+
+  const avgMin = marketAverages.length
+    ? Math.round(marketAverages.reduce((a, b) => a + b.avgMin, 0) / marketAverages.length)
+    : 0;
+  const avgMax = marketAverages.length
+    ? Math.round(marketAverages.reduce((a, b) => a + b.avgMax, 0) / marketAverages.length)
+    : 0;
+
+  // Section 4: Total arrival calculation on eligible rows
+  let totalArrival = 0;
+  for (let i = 0; i < eligibleRows.length; i++) {
+    const a = eligibleRows[i].arrival;
+    if (typeof a === 'number') {
+      totalArrival += a;
+    } else if (typeof a === 'string') {
+      const m = a.match(/^([0-9,]+)/);
+      if (m) totalArrival += parseInt(m[1].replace(/,/g, ''), 10) || 0;
+    }
+  }
+
+  const markets = marketKeys.length;
 
   return {
     hasData: true,
@@ -6234,6 +6557,63 @@ export function calculateByproductSummary(
     markets,
     specialAttr,
   };
+}
+
+// ─── SCROLL INTERSECTION ANIMATED COUNTER COMPONENT ──────────────────────────
+
+function AnimatedCounter({
+  target,
+  duration = 950,
+  prefix = '',
+  suffix = '',
+  formatUrdu = false,
+}: {
+  target: number;
+  duration?: number;
+  prefix?: string;
+  suffix?: string;
+  formatUrdu?: boolean;
+}) {
+  const [count, setCount] = useState(0);
+  const elRef = useRef<HTMLSpanElement>(null);
+  const animatedRef = useRef(false);
+
+  useEffect(() => {
+    if (!elRef.current || target <= 0) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !animatedRef.current) {
+          animatedRef.current = true;
+          let startTime: number | null = null;
+          const animate = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            // Ease-out cubic curve
+            const ease = 1 - Math.pow(1 - progress, 3);
+            const val = Math.round(ease * target);
+            setCount(val);
+            if (progress < 1) {
+              window.requestAnimationFrame(animate);
+            }
+          };
+          window.requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(elRef.current);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  const numStr = count.toLocaleString();
+  const displayVal = formatUrdu ? toUrduDigits(numStr) : numStr;
+
+  return (
+    <span ref={elRef}>
+      {prefix}{displayVal}{suffix}
+    </span>
+  );
 }
 
 // ─── NEW FIGMA BY-PRODUCT NATIONAL CARD COMPONENT ───────────────────────────
@@ -6367,11 +6747,16 @@ function ByProductNationalCard({
             {lang === 'ur' ? 'اوسط کم از کم' : 'Avg min'}
           </span>
           <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
-            {stats.hasData && stats.avgMin > 0
-              ? lang === 'ur'
-                ? toUrduDigits(stats.avgMin.toLocaleString()) + ' روپے'
-                : 'Rs ' + stats.avgMin.toLocaleString()
-              : '—'}
+            {stats.hasData && stats.avgMin > 0 ? (
+              <AnimatedCounter
+                target={stats.avgMin}
+                prefix={lang === 'ur' ? '' : 'Rs '}
+                suffix={lang === 'ur' ? ' روپے' : ''}
+                formatUrdu={lang === 'ur'}
+              />
+            ) : (
+              '—'
+            )}
           </span>
           <span className="text-[11px] font-medium text-white/60">
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
@@ -6384,11 +6769,16 @@ function ByProductNationalCard({
             {lang === 'ur' ? 'اوسط زیادہ سے زیادہ' : 'Avg max'}
           </span>
           <span className="text-[22px] font-black text-white tracking-tight leading-none my-1">
-            {stats.hasData && stats.avgMax > 0
-              ? lang === 'ur'
-                ? toUrduDigits(stats.avgMax.toLocaleString()) + ' روپے'
-                : 'Rs ' + stats.avgMax.toLocaleString()
-              : '—'}
+            {stats.hasData && stats.avgMax > 0 ? (
+              <AnimatedCounter
+                target={stats.avgMax}
+                prefix={lang === 'ur' ? '' : 'Rs '}
+                suffix={lang === 'ur' ? ' روپے' : ''}
+                formatUrdu={lang === 'ur'}
+              />
+            ) : (
+              '—'
+            )}
           </span>
           <span className="text-[11px] font-medium text-white/60">
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
@@ -6408,14 +6798,18 @@ function ByProductNationalCard({
           </span>
         </div>
 
-        {/* Row 2, Col 2: Markets */}
+        {/* Row 2, Col 2: Markets (Animated Number from 0 to target+) */}
         <div className="flex flex-col justify-center pl-2">
           <span className="text-[22px] font-black text-white tracking-tight leading-none mt-2 mb-0.5">
-            {stats.hasData && stats.markets > 0
-              ? lang === 'ur'
-                ? toUrduDigits(stats.markets) + '+'
-                : stats.markets + '+'
-              : '0'}
+            {stats.hasData && stats.markets > 0 ? (
+              <AnimatedCounter
+                target={stats.markets}
+                suffix="+"
+                formatUrdu={lang === 'ur'}
+              />
+            ) : (
+              '0'
+            )}
           </span>
           <span className="text-[12px] font-semibold text-white/80">
             {lang === 'ur' ? 'منڈیاں / مارکیٹس' : 'Markets'}
@@ -6450,8 +6844,7 @@ function ByProductNationalCard({
           <img
             src={iconSrc}
             alt={stats.byproduct}
-            className="w-24 h-24 object-contain drop-shadow-md"
-            loading="lazy"
+            className="w-14 h-14 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)] opacity-95"
           />
         </div>
       </div>
