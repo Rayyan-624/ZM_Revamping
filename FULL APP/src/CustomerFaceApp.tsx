@@ -10276,34 +10276,68 @@ function ProductRatesScreen({
     return match ? parseInt(match[1].replace(/,/g, ""), 10) || 0 : 0;
   };
 
-  // Section: Market-balanced average min & max calculation (Identical to Screen 2)
-  const marketMap: Record<string, { mins: number[]; maxs: number[] }> = {};
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i];
-    const mKey = r.mandiName || r.mandiCity || 'Mandi';
-    if (!marketMap[mKey]) marketMap[mKey] = { mins: [], maxs: [] };
-    if (typeof r.min === 'number' && r.min > 0) marketMap[mKey].mins.push(r.min);
-    if (typeof r.max === 'number' && r.max > 0) marketMap[mKey].maxs.push(r.max);
-  }
+  // Format current selected date and determine date index in REAL_DATES_TIMELINE
+  const curDate = statDateFilter || new Date(2026, 8, 14);
+  const curDateStr = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, "0")}-${String(curDate.getDate()).padStart(2, "0")}`;
+  const isDateInRange = curDateStr >= "2026-08-15" && curDateStr <= "2026-09-14";
+  const dateIdx = isDateInRange ? REAL_DATES_TIMELINE.indexOf(curDateStr) : -1;
 
-  const marketKeys = Object.keys(marketMap);
-  const marketAverages = marketKeys
-    .map((k) => {
-      const mObj = marketMap[k];
-      const avgMin = mObj.mins.length ? mObj.mins.reduce((a, b) => a + b, 0) / mObj.mins.length : 0;
-      const avgMax = mObj.maxs.length ? mObj.maxs.reduce((a, b) => a + b, 0) / mObj.maxs.length : 0;
-      return { avgMin, avgMax };
-    })
-    .filter((m) => m.avgMin > 0 && m.avgMax > 0);
+  // Real Excel data-driven date & attribute-specific overview statistics
+  const { statMin, statMax, statArrival, statMandis } = useMemo(() => {
+    if (!isDateInRange || dateIdx === -1 || rows.length === 0) {
+      return { statMin: 0, statMax: 0, statArrival: 0, statMandis: 0 };
+    }
 
-  const statMin = marketAverages.length
-    ? Math.round(marketAverages.reduce((a, b) => a + b.avgMin, 0) / marketAverages.length)
-    : (rows.length ? Math.min(...rows.map((r) => r.min)) : 0);
-  const statMax = marketAverages.length
-    ? Math.round(marketAverages.reduce((a, b) => a + b.avgMax, 0) / marketAverages.length)
-    : (rows.length ? Math.max(...rows.map((r) => r.max)) : 0);
-  const statArrival = rows.reduce((s, r) => s + parseArrival(r.arrival), 0);
-  const statMandis = marketKeys.length;
+    const marketMap: Record<string, { mins: number[]; maxs: number[] }> = {};
+    let totalArrival = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const mKey = r.mandiName || r.mandiCity || "Mandi";
+      if (!marketMap[mKey]) marketMap[mKey] = { mins: [], maxs: [] };
+
+      const rowTimeline = getExcelTimeline({
+        product,
+        byproduct: r.byproduct || byproduct,
+        locationLabel: r.mandiName,
+        locationKind: "mandi",
+        rateType: r.rateType || attrRateType,
+        range: "year",
+      });
+
+      const mi = rowTimeline.mins[dateIdx] ?? 0;
+      const mx = rowTimeline.maxs[dateIdx] ?? 0;
+      const arr = rowTimeline.arrivals[dateIdx] ?? 0;
+
+      if (mi > 0) marketMap[mKey].mins.push(mi);
+      if (mx > 0) marketMap[mKey].maxs.push(mx);
+      totalArrival += arr;
+    }
+
+    const marketKeys = Object.keys(marketMap);
+    const marketAverages = marketKeys
+      .map((k) => {
+        const mObj = marketMap[k];
+        const avgMin = mObj.mins.length ? mObj.mins.reduce((a, b) => a + b, 0) / mObj.mins.length : 0;
+        const avgMax = mObj.maxs.length ? mObj.maxs.reduce((a, b) => a + b, 0) / mObj.maxs.length : 0;
+        return { avgMin, avgMax };
+      })
+      .filter((m) => m.avgMin > 0 && m.avgMax > 0);
+
+    const sMin = marketAverages.length
+      ? Math.round(marketAverages.reduce((a, b) => a + b.avgMin, 0) / marketAverages.length)
+      : 0;
+    const sMax = marketAverages.length
+      ? Math.round(marketAverages.reduce((a, b) => a + b.avgMax, 0) / marketAverages.length)
+      : 0;
+
+    return {
+      statMin: sMin,
+      statMax: sMax,
+      statArrival: totalArrival,
+      statMandis: marketKeys.length,
+    };
+  }, [rows, isDateInRange, dateIdx, product, byproduct, attrRateType]);
 
   // Build comparison rows by geoView
   const compRows = useMemo((): CompRow[] => {
@@ -11336,10 +11370,12 @@ function ProductRatesScreen({
                                     : "inherit",
                               }}
                             >
-                              {lang === "ur" ? `${toUrduDigits(statMax.toLocaleString("en-PK"))} روپے` : fmt(statMax)}
+                              {statMax > 0
+                                ? (lang === "ur" ? `${toUrduDigits(statMax.toLocaleString("en-PK"))} روپے` : fmt(statMax))
+                                : "—"}
                             </span>
                             <span className="text-[7.5px] text-[#80918B] leading-none mt-0.5">
-                              {lang === "ur" ? "فی ۴۰ کلو" : "(40 KG)"}
+                              {statMax > 0 ? (lang === "ur" ? "فی ۴۰ کلو" : "(40 KG)") : ""}
                             </span>
                           </div>
 
@@ -11368,10 +11404,12 @@ function ProductRatesScreen({
                                     : "inherit",
                               }}
                             >
-                              {lang === "ur" ? `${toUrduDigits(statMin.toLocaleString("en-PK"))} روپے` : fmt(statMin)}
+                              {statMin > 0
+                                ? (lang === "ur" ? `${toUrduDigits(statMin.toLocaleString("en-PK"))} روپے` : fmt(statMin))
+                                : "—"}
                             </span>
                             <span className="text-[7.5px] text-[#80918B] leading-none mt-0.5">
-                              {lang === "ur" ? "فی ۴۰ کلو" : "(40 KG)"}
+                              {statMin > 0 ? (lang === "ur" ? "فی ۴۰ کلو" : "(40 KG)") : ""}
                             </span>
                           </div>
 
@@ -11401,13 +11439,13 @@ function ProductRatesScreen({
                               }}
                             >
                               {statArrival > 0
-                                ? lang === "ur"
-                                  ? `${toUrduDigits(statArrival.toLocaleString())}`
-                                  : statArrival.toLocaleString()
+                                ? (lang === "ur"
+                                    ? `${toUrduDigits(statArrival.toLocaleString())}`
+                                    : statArrival.toLocaleString())
                                 : "—"}
                             </span>
                             <span className="text-[7.5px] text-[#80918B] leading-none mt-0.5">
-                              {lang === "ur" ? "کل بوری" : "Total Bags"}
+                              {statArrival > 0 ? (lang === "ur" ? "کل بوری" : "Total Bags") : ""}
                             </span>
                           </div>
                         </div>
@@ -11801,14 +11839,32 @@ function ProductRatesScreen({
                 em.toLowerCase().replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "").includes(r.mandiName.toLowerCase().replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, ""))
               );
               const rowCanon = activeRow ? getMandiCanonicalAttrs(activeRow.mandiName) : getMandiCanonicalAttrs(em);
-              const rowAttrMult = computeAttrMult(
-                rowCanon.variety,
-                rowCanon.color,
-                rowCanon.newOld,
-                rowCanon.spec,
-                rowCanon.condition,
-              );
-              const effMult = rowAttrMult;
+
+              let mapMin = 0;
+              let mapMax = 0;
+              let mapArr = "—";
+              let mapTrend: "up" | "down" | "stable" = "stable";
+              let mapTrendPct = 0;
+
+              if (isDateInRange && dateIdx >= 0) {
+                const mapTimeline = getExcelTimeline({
+                  product,
+                  byproduct: activeRow?.byproduct || byproduct,
+                  locationLabel: activeRow?.mandiName || em,
+                  locationKind: "mandi",
+                  rateType: activeRow?.rateType || attrRateType || "Mandi Rate",
+                  range: "year",
+                });
+                mapMin = mapTimeline.mins[dateIdx] ?? 0;
+                mapMax = mapTimeline.maxs[dateIdx] ?? 0;
+                const aVal = mapTimeline.arrivals[dateIdx] ?? 0;
+                mapArr = aVal > 0 ? aVal.toLocaleString("en-PK") : "—";
+                const pNow = mapTimeline.prices[dateIdx] ?? 0;
+                const pPast = dateIdx > 0 ? (mapTimeline.prices[dateIdx - 1] ?? pNow) : pNow;
+                const delta = pNow - pPast;
+                mapTrend = delta > 0.01 ? "up" : delta < -0.01 ? "down" : "stable";
+                mapTrendPct = pPast > 0 ? Math.round((Math.abs(delta) / pPast) * 1000) / 10 : 0;
+              }
 
               return (
                 <ExpandableMandiMapCard
@@ -11818,12 +11874,12 @@ function ProductRatesScreen({
                   rateInfo={{
                     cropName: currentCommodity,
                     mandiName: cmn,
-                    minPrice: activeRow ? Math.round(activeRow.min * effMult) : 5503,
-                    maxPrice: activeRow ? Math.round(activeRow.max * effMult) : 5938,
+                    minPrice: mapMin,
+                    maxPrice: mapMax,
                     rateType: activeRow?.rateType || "Retail",
-                    trend: (activeRow?.trend as any) || "up",
-                    trendPct: activeRow?.trendPct !== undefined ? activeRow.trendPct : 0.9,
-                    arrival: activeRow?.arrival || "5,600",
+                    trend: mapTrend as any,
+                    trendPct: mapTrendPct,
+                    arrival: mapArr,
                     quality: rowCanon.newOld || "New",
                     variety: rowCanon.variety,
                     color: rowCanon.color,
@@ -12708,26 +12764,36 @@ function ProductRatesScreen({
                                 rateType: r.rateType,
                                 range: "year",
                               });
-                              const pSeries = rowTimeline.prices;
-                              const pLatest = pSeries[pSeries.length - 1] ?? r.min;
 
-                              // 24h = 1 trading observation prior, 72h = 3 observations prior, weekly = 7 observations prior, monthly = earliest available observation (up to 30 days)
-                              const pPrev =
-                                tableTrendInterval === "72h"
-                                  ? (pSeries[pSeries.length - 4] ?? pSeries[0] ?? pLatest)
-                                  : tableTrendInterval === "weekly"
-                                    ? (pSeries[pSeries.length - 8] ?? pSeries[0] ?? pLatest)
-                                    : tableTrendInterval === "monthly"
-                                      ? (pSeries[0] ?? pLatest)
-                                      : (pSeries[pSeries.length - 2] ?? pLatest);
-
+                              let rowMin = 0;
+                              let rowMax = 0;
+                              let rowArr = 0;
                               let intervalPct = 0;
                               let intervalTrend: "up" | "down" | "stable" = "stable";
-                              if (pPrev > 0 && pLatest > 0) {
-                                const delta = pLatest - pPrev;
-                                intervalPct = Math.round((Math.abs(delta) / pPrev) * 1000) / 10;
-                                if (delta > 0.01) intervalTrend = "up";
-                                else if (delta < -0.01) intervalTrend = "down";
+
+                              if (isDateInRange && dateIdx >= 0) {
+                                rowMin = rowTimeline.mins[dateIdx] ?? 0;
+                                rowMax = rowTimeline.maxs[dateIdx] ?? 0;
+                                rowArr = rowTimeline.arrivals[dateIdx] ?? 0;
+
+                                const pSeries = rowTimeline.prices;
+                                const pLatest = pSeries[dateIdx] ?? 0;
+
+                                const pPrev =
+                                  tableTrendInterval === "72h"
+                                    ? (pSeries[Math.max(0, dateIdx - 3)] ?? pLatest)
+                                    : tableTrendInterval === "weekly"
+                                      ? (pSeries[Math.max(0, dateIdx - 7)] ?? pLatest)
+                                      : tableTrendInterval === "monthly"
+                                        ? (pSeries[0] ?? pLatest)
+                                        : (pSeries[Math.max(0, dateIdx - 1)] ?? pLatest);
+
+                                if (pPrev > 0 && pLatest > 0) {
+                                  const delta = pLatest - pPrev;
+                                  intervalPct = Math.round((Math.abs(delta) / pPrev) * 1000) / 10;
+                                  if (delta > 0.01) intervalTrend = "up";
+                                  else if (delta < -0.01) intervalTrend = "down";
+                                }
                               }
 
                               const trendArrow =
@@ -12770,18 +12836,18 @@ function ProductRatesScreen({
                                         return {
                                           mandiName: r.mandiName,
                                           rateType: r.rateType,
-                                          min: r.min,
-                                          max: r.max,
+                                          min: rowMin,
+                                          max: rowMax,
                                           trend: intervalTrend,
                                           trendPct: intervalPct,
-                                          arrival: r.arrival,
+                                          arrival: rowArr > 0 ? rowArr : undefined,
                                         };
                                       });
 
                                       if (voiceEnabled) {
                                         const cleanMandi = r.mandiName.replace(/\s*mandi$/i, "").replace(/\s*منڈی$/i, "");
-                                        const minVal = r.min.toLocaleString("en-PK");
-                                        const maxVal = r.max.toLocaleString("en-PK");
+                                        const minVal = rowMin > 0 ? rowMin.toLocaleString("en-PK") : "";
+                                        const maxVal = rowMax > 0 ? rowMax.toLocaleString("en-PK") : "";
                                         const rtUr = tr(r.rateType).replace(" ریٹ", "").replace(" Rate", "");
                                         const spoken = lang === "ur"
                                           ? `${tm(cleanMandi)} منڈی، ${rtUr}، ریٹ ${minVal} سے ${maxVal} روپے`
@@ -12828,14 +12894,15 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        color: "#087F63",
+                                        color: rowMin > 0 ? "#087F63" : "#80918B",
                                         fontWeight: 800,
                                         fontSize: 11,
                                         whiteSpace: "nowrap",
                                       }}
                                     >
-                                      {r.min.toLocaleString("en-PK")} –{" "}
-                                      {r.max.toLocaleString("en-PK")}
+                                      {rowMin > 0 && rowMax > 0
+                                        ? `${rowMin.toLocaleString("en-PK")} – ${rowMax.toLocaleString("en-PK")}`
+                                        : "—"}
                                     </td>
 
                                     {/* 3. Price Type */}
@@ -12874,8 +12941,14 @@ function ProductRatesScreen({
                                         whiteSpace: "nowrap",
                                       }}
                                     >
-                                      <span>{trendArrow}</span>{" "}
-                                      {intervalPct > 0 ? `${intervalPct}%` : ""}
+                                      {rowMin > 0 ? (
+                                        <span>
+                                          <span>{trendArrow}</span>{" "}
+                                          {intervalPct > 0 ? `${intervalPct}%` : ""}
+                                        </span>
+                                      ) : (
+                                        "—"
+                                      )}
                                     </td>
 
                                     {/* 5. Quality (New or Old) */}
@@ -12906,14 +12979,14 @@ function ProductRatesScreen({
                                       style={{
                                         padding: "7px 4px",
                                         textAlign: "center",
-                                        color: r.arrival ? "#087F63" : "#80918B",
+                                        color: rowArr > 0 ? "#087F63" : "#80918B",
                                         fontWeight: 700,
                                         fontSize: 10,
                                         whiteSpace: "nowrap",
                                       }}
                                     >
-                                      {r.arrival
-                                        ? `${r.arrival} ${lang === "ur" ? "تھیلے" : "Bags"}`
+                                      {rowArr > 0
+                                        ? `${rowArr.toLocaleString("en-PK")} ${lang === "ur" ? "تھیلے" : "Bags"}`
                                         : "—"}
                                     </td>
 
