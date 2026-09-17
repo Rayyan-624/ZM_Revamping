@@ -11626,54 +11626,51 @@ function ProductRatesScreen({
                     {/* HORIZONTAL DIVIDER & COLLAPSIBLE ATTRIBUTES STRIP */}
                     <div className="w-full my-1.5" style={{ height: 1, background: "#EEF3F0" }} />
 
-                    {/* Attributes Bar: Prominent Rate Type Chip (Visible before expanding) + 5 More Attributes Toggle */}
-                    <div className="w-full flex items-center justify-between gap-1.5 py-0.5">
-                      {/* 1. EXPOSED RATE TYPE (Visible before expanding, tap to open rate type sheet) */}
+                    {/* Attributes Bar: Consistent Rate Type Button + 5 More Attributes Toggle */}
+                    <div className="w-full flex items-center justify-between gap-2 py-0.5 px-0.5">
+                      {/* 1. EXPOSED RATE TYPE (Consistent with attribute button styling) */}
                       <button
                         type="button"
                         onClick={() => setAttrSheet("ratetype")}
-                        className="tap-target flex items-center gap-1.5 py-1 px-2.5 rounded-xl border transition-all duration-150 active:scale-95 hover:border-[#087F63] min-w-0"
-                        style={{
-                          background: "linear-gradient(135deg, #F0FAF5 0%, #E6F7F0 100%)",
-                          borderColor: "#A7F3D0",
-                          boxShadow: "0 1px 3px rgba(8,127,99,0.08)",
-                        }}
+                        className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group flex-1 py-0.5 min-w-0"
                         title={lang === "ur" ? "نرخ کی قسم تبدیل کریں" : "Change Rate Type"}
                       >
                         <div
-                          className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
-                          style={{ background: "#087F63", color: "#FFFFFF" }}
+                          className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: "#E8F5EE", color: "#087F63" }}
                         >
-                          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M4 19h4V9H4v10zm6 0h4V4h-4v15zm6 0h4v-7h-4v7z" />
                           </svg>
                         </div>
-                        <div className="flex items-center gap-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <span
-                            className="text-[9px] font-semibold text-[#065F46] whitespace-nowrap"
+                            className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
                             style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
                           >
-                            {lang === "ur" ? "نرخ:" : "Rate:"}
+                            {lang === "ur" ? "نرخ کی قسم" : "Rate Type"}
                           </span>
-                          <span
-                            className="text-[10.5px] font-extrabold text-[#064E3B] truncate"
-                            style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                          >
-                            {attrRateType ? tr(attrRateType) : (lang === "ur" ? "منڈی ریٹ" : "Mandi Rate")}
-                          </span>
-                          <svg
-                            width="8"
-                            height="8"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#087F63"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="flex-shrink-0"
-                          >
-                            <polyline points="6 9 12 15 18 9" />
-                          </svg>
+                          <div className="flex items-center justify-between gap-1 mt-0.5">
+                            <span
+                              className="font-bold text-[11.5px] leading-tight truncate text-[#075E4F]"
+                              style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                            >
+                              {attrRateType ? tr(attrRateType).replace(" ریٹ", "").replace(" Rate", "") : (lang === "ur" ? "منڈی" : "Mandi")}
+                            </span>
+                            <svg
+                              width="8"
+                              height="8"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#087F63"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="flex-shrink-0"
+                            >
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </div>
                         </div>
                       </button>
 
@@ -11726,48 +11723,14 @@ function ProductRatesScreen({
                       </button>
                     </div>
 
-                    {/* BOTTOM SECTION: 6 Attributes (2 Columns x 3 Rows) — Visible ONLY when open */}
+                    {/* BOTTOM SECTION: 5 Attributes (Color, Spec, Condition & Variety, Quality, Moisture) */}
                     {isAttrPanelOpen && (() => {
                       const hasMoistureData = allRows.some((r) => r.moisture && r.moisture.trim().length > 0) || (attrMoisture !== null);
                       return (
-                        <div className="grid grid-cols-2 divide-x divide-[#EEF3F0] pt-1.5 animate-fadeIn">
-                          {/* LEFT COLUMN: Rate Type, Color, Spec */}
+                        <div className="grid grid-cols-2 divide-x divide-[#EEF3F0] pt-2 animate-fadeIn">
+                          {/* LEFT COLUMN: Color, Spec, Condition */}
                           <div className="flex flex-col gap-y-1.5 pr-2.5">
-                            {/* 1. RATE TYPE */}
-                            <button
-                              onClick={() => setAttrSheet("ratetype")}
-                              className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
-                            >
-                              <div
-                                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                style={{ background: "#E8F5EE", color: "#087F63" }}
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M4 19h4V9H4v10zm6 0h4V4h-4v15zm6 0h4v-7h-4v7z" />
-                                </svg>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span
-                                  className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
-                                  style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                                >
-                                  {lang === "ur" ? "نرخ کی قسم" : "Rate Type"}
-                                </span>
-                                <div className="flex items-center justify-between gap-1 mt-0.5">
-                                  <span
-                                    className="font-bold text-[11.5px] leading-tight truncate text-[#075E4F]"
-                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
-                                  >
-                                    {attrRateType ? tr(attrRateType).replace(" ریٹ", "").replace(" Rate", "") : "—"}
-                                  </span>
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#087F63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                                    <polyline points="6 9 12 15 18 9" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </button>
-
-                            {/* 2. COLOR */}
+                            {/* 1. COLOR */}
                             <button
                               onClick={() => setAttrSheet("color")}
                               className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
@@ -11801,7 +11764,7 @@ function ProductRatesScreen({
                               </div>
                             </button>
 
-                            {/* 3. SPEC */}
+                            {/* 2. SPEC */}
                             <button
                               onClick={() => setAttrSheet("spec")}
                               className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
@@ -11834,6 +11797,42 @@ function ProductRatesScreen({
                                 </div>
                               </div>
                             </button>
+
+                            {/* 3. CONDITION (when moisture exists) */}
+                            {hasMoistureData && (
+                              <button
+                                onClick={() => setAttrSheet("condition")}
+                                className="tap-target flex items-center gap-1.5 text-left transition active:scale-[0.98] group w-full py-0.5"
+                              >
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: "#CCFBF1", color: "#0D9488" }}
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                                  </svg>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span
+                                    className="text-[8.5px] text-[#6B7280] font-medium block leading-none"
+                                    style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                  >
+                                    {lang === "ur" ? "حالت" : "Condition"}
+                                  </span>
+                                  <div className="flex items-center justify-between gap-1 mt-0.5">
+                                    <span
+                                      className="font-bold text-[11.5px] leading-tight truncate text-[#065F46]"
+                                      style={{ fontFamily: lang === "ur" ? URDU_FONT : "inherit" }}
+                                    >
+                                      {attrCondition ? t(attrCondition) : "—"}
+                                    </span>
+                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                                      <polyline points="6 9 12 15 18 9" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </button>
+                            )}
                           </div>
 
                           {/* RIGHT COLUMN: Variety, Quality, Moisture/Condition */}
