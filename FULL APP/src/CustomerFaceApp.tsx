@@ -6617,7 +6617,7 @@ function AnimatedCounter({
   );
 }
 
-// ─── NEW FIGMA BY-PRODUCT NATIONAL CARD COMPONENT ───────────────────────────
+// ─── REVAMPED FIGMA BY-PRODUCT NATIONAL CARD COMPONENT ───────────────────────────
 
 function ByProductNationalCard({
   stats,
@@ -6633,7 +6633,7 @@ function ByProductNationalCard({
   const { lang, tc, tr } = useLang();
   const iconSrc = getproductIconSrc(stats.byproduct, vertical);
 
-  // Format arrival strictly in Bags e.g. 3,400 Bags (never tonnes). If missing/0, show '—'
+  // Format arrival strictly in Bags e.g. 17,522 Bags (never tonnes). If missing/0, show '—'
   const arrivalDisplay =
     stats.hasData && stats.totalArrival > 0
       ? lang === 'ur'
@@ -6647,19 +6647,32 @@ function ByProductNationalCard({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className="relative w-full rounded-[20px] overflow-hidden transition-all duration-200 active:scale-[0.98] cursor-pointer shadow-[0_4px_16px_rgba(6,77,64,0.08)] hover:shadow-[0_6px_20px_rgba(6,77,64,0.14)] select-none flex flex-col justify-between"
+      className="relative w-full rounded-[24px] overflow-hidden transition-all duration-200 active:scale-[0.985] cursor-pointer shadow-[0_6px_22px_rgba(6,77,64,0.08),0_2px_6px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_28px_rgba(6,77,64,0.12)] select-none flex flex-col justify-between"
       style={{
         background: '#FFFFFF',
         border: '1.5px solid #D1E5DC',
-        padding: '12px 12px 10px',
-        minHeight: 215,
+        padding: '16px 18px 14px',
+        minHeight: 200,
       }}
     >
+      {/* Subtle Concentric Rings Motif in bottom-right corner (from original design, soft emerald tint) */}
+      <div
+        className="absolute -bottom-14 -right-14 pointer-events-none rounded-full"
+        style={{
+          width: 210,
+          height: 210,
+          border: '1.8px solid rgba(16, 185, 129, 0.12)',
+          boxShadow:
+            'inset 0 0 0 24px rgba(16, 185, 129, 0.04), inset 0 0 0 54px rgba(16, 185, 129, 0.02)',
+          zIndex: 0,
+        }}
+      />
+
       {/* Top Header: Title & Rate Type on Left; Special Attribute on TOP & +X Count BELOW on Right */}
-      <div className="relative z-10 flex items-start justify-between gap-1.5">
+      <div className="relative z-10 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h3
-            className="text-[16px] sm:text-[17px] font-black text-[#143B33] leading-tight tracking-tight line-clamp-1"
+            className="text-[20px] sm:text-[22px] font-black text-[#143B33] leading-tight tracking-tight line-clamp-1"
             style={{
               fontFamily: lang === 'ur' ? URDU_FONT : "'Inter', sans-serif",
             }}
@@ -6667,7 +6680,7 @@ function ByProductNationalCard({
             {tc(stats.byproduct)}
           </h3>
           <p
-            className="text-[11.5px] sm:text-[12px] font-bold text-[#087F63] mt-0.5 leading-none truncate"
+            className="text-[12.5px] sm:text-[13px] font-bold text-[#087F63] mt-0.5 leading-none truncate"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {tr(stats.mostOccurringRateType)}
@@ -6675,11 +6688,11 @@ function ByProductNationalCard({
         </div>
 
         {/* Right Stack: 1) Special Attribute ON TOP, 2) Rate Count BELOW */}
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
           {stats.specialAttr && (
-            <div className="flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-[#E0F2FE] border border-[#BAE6FD] text-[#0369A1] shadow-sm">
+            <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold px-2.5 py-1 rounded-full bg-[#E0F2FE] border border-[#BAE6FD] text-[#0369A1] shadow-sm">
               <span
-                className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0"
+                className="w-2 h-2 rounded-full inline-block flex-shrink-0"
                 style={{ backgroundColor: stats.specialAttr.dotColor || '#0284C7' }}
               />
               <span className="whitespace-nowrap">
@@ -6696,14 +6709,14 @@ function ByProductNationalCard({
                 if (onMorePriceTypesClick) onMorePriceTypesClick();
                 else onClick();
               }}
-              className="tap-target flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] text-[#065F46] font-bold text-[9px] transition active:scale-95 shadow-sm"
+              className="tap-target flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] text-[#065F46] font-extrabold text-[10.5px] transition active:scale-95 shadow-sm"
             >
               <span>
                 {lang === 'ur'
                   ? '+' + toUrduDigits(stats.otherRateTypesCount) + ' ریٹس'
                   : '+' + stats.otherRateTypesCount + ' Rates'}
               </span>
-              <span className="text-[#087F63] font-black text-[8px]">
+              <span className="text-[#087F63] font-black text-[9px]">
                 {lang === 'ur' ? '❮' : '❯'}
               </span>
             </button>
@@ -6711,17 +6724,17 @@ function ByProductNationalCard({
         </div>
       </div>
 
-      {/* Center 2x2 Metric Tiles (High Contrast for High Sunlight / Farmer Readability) */}
-      <div className="relative z-10 grid grid-cols-2 gap-1.5 sm:gap-2 my-2">
+      {/* Center 2x2 Metric Tiles (Spacious & High Contrast for Sunlight / Farmer Readability) */}
+      <div className="relative z-10 grid grid-cols-2 gap-2.5 my-2.5">
         {/* 1. Avg Min */}
-        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl px-3 py-2 flex flex-col justify-between">
           <span
-            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            className="text-[11px] sm:text-[11.5px] font-bold text-[#52635F] leading-tight"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {lang === 'ur' ? 'اوسط کم' : 'Avg Min'}
           </span>
-          <span className="text-[14.5px] sm:text-[15.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5 truncate">
+          <span className="text-[16px] sm:text-[18px] font-black text-[#143B33] tracking-tight leading-tight my-0.5">
             {stats.hasData && stats.avgMin > 0
               ? lang === 'ur'
                 ? `روپے ${toUrduDigits(stats.avgMin.toLocaleString())}`
@@ -6729,7 +6742,7 @@ function ByProductNationalCard({
               : '—'}
           </span>
           <span
-            className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+            className="text-[9.5px] sm:text-[10px] font-bold text-[#087F63] leading-none"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
@@ -6737,14 +6750,14 @@ function ByProductNationalCard({
         </div>
 
         {/* 2. Avg Max */}
-        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl px-3 py-2 flex flex-col justify-between">
           <span
-            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            className="text-[11px] sm:text-[11.5px] font-bold text-[#52635F] leading-tight"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {lang === 'ur' ? 'اوسط زیادہ' : 'Avg Max'}
           </span>
-          <span className="text-[14.5px] sm:text-[15.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5 truncate">
+          <span className="text-[16px] sm:text-[18px] font-black text-[#143B33] tracking-tight leading-tight my-0.5">
             {stats.hasData && stats.avgMax > 0
               ? lang === 'ur'
                 ? `روپے ${toUrduDigits(stats.avgMax.toLocaleString())}`
@@ -6752,41 +6765,41 @@ function ByProductNationalCard({
               : '—'}
           </span>
           <span
-            className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+            className="text-[9.5px] sm:text-[10px] font-bold text-[#087F63] leading-none"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
-        {/* 3. Total Arrival (Bags only; '—' if missing) */}
-        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+        {/* 3. Total Arrival (Bags with full name, NO truncation!) */}
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl px-3 py-2 flex flex-col justify-between">
           <span
-            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            className="text-[11px] sm:text-[11.5px] font-bold text-[#52635F] leading-tight"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {lang === 'ur' ? 'کل آمد' : 'Total Arrival'}
           </span>
-          <span className="text-[13.5px] sm:text-[14.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5 truncate">
+          <span className="text-[15px] sm:text-[16.5px] font-black text-[#143B33] tracking-tight leading-tight my-0.5">
             {arrivalDisplay}
           </span>
           <span
-            className="text-[8.5px] sm:text-[9px] font-bold text-[#087F63] leading-none"
+            className="text-[9.5px] sm:text-[10px] font-bold text-[#087F63] leading-none"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {lang === 'ur' ? 'فی ۴۰ کلو' : 'per 40 kg'}
           </span>
         </div>
 
-        {/* 4. Locations (Animated Counter) */}
-        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl p-2 flex flex-col justify-between">
+        {/* 4. Locations (Animated Counter only, NO "All Pakistan" text) */}
+        <div className="bg-[#F7FAF9] border border-[#E2ECE8] rounded-xl px-3 py-2 flex flex-col justify-center">
           <span
-            className="text-[10px] sm:text-[10.5px] font-bold text-[#52635F] leading-tight"
+            className="text-[11px] sm:text-[11.5px] font-bold text-[#52635F] leading-tight"
             style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
           >
             {lang === 'ur' ? 'مقامات' : 'Locations'}
           </span>
-          <span className="text-[14.5px] sm:text-[15.5px] font-black text-[#087F63] tracking-tight leading-tight my-0.5">
+          <span className="text-[18px] sm:text-[20px] font-black text-[#087F63] tracking-tight leading-tight my-0.5">
             {stats.hasData && stats.markets > 0 ? (
               <AnimatedCounter
                 target={stats.markets}
@@ -6797,21 +6810,15 @@ function ByProductNationalCard({
               '0'
             )}
           </span>
-          <span
-            className="text-[8.5px] sm:text-[9px] font-semibold text-[#64748B] leading-none"
-            style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
-          >
-            {lang === 'ur' ? 'پورے پاکستان سے' : 'All Pakistan'}
-          </span>
         </div>
       </div>
 
       {/* Bottom Row: Timestamp on Left + Large Crop Illustration in Bottom-Right */}
-      <div className="relative z-10 flex items-end justify-between pt-0.5">
-        <div className="flex items-center gap-1 text-[9.5px] font-bold text-[#52635F] pb-0.5">
+      <div className="relative z-10 flex items-end justify-between pt-1">
+        <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-[#52635F] pb-0.5">
           <svg
-            width="11"
-            height="11"
+            width="13"
+            height="13"
             viewBox="0 0 24 24"
             fill="none"
             stroke="#087F63"
@@ -6824,16 +6831,16 @@ function ByProductNationalCard({
             <polyline points="12 6 12 12 16 14" />
           </svg>
           <span className="truncate">
-            {lang === 'ur' ? 'تازہ ترین ۱۲ منٹ پہلے' : '12m ago'}
+            {lang === 'ur' ? 'تازہ ترین ۱۲ منٹ پہلے' : 'Updated 12m ago'}
           </span>
         </div>
 
         {/* Large Crisp Crop Illustration */}
-        <div className="relative -mb-1 -mr-1 pointer-events-none flex-shrink-0">
+        <div className="relative -mb-1.5 -mr-1 pointer-events-none flex-shrink-0">
           <img
             src={iconSrc}
             alt={stats.byproduct}
-            className="w-[52px] h-[52px] sm:w-[58px] sm:h-[58px] object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.12)] transition-transform duration-200"
+            className="w-[62px] h-[62px] sm:w-[68px] sm:h-[68px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.12)] transition-transform duration-200"
             loading="lazy"
           />
         </div>
@@ -6841,8 +6848,8 @@ function ByProductNationalCard({
 
       {/* No Data Overlay if hasData is false */}
       {!stats.hasData && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2 rounded-[20px] bg-white/90 backdrop-blur-[2px] pointer-events-none">
-          <div className="px-3 py-1.5 rounded-xl bg-[#F1F7F4] border border-[#D1E5DC] text-center shadow-sm">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2 rounded-[24px] bg-white/90 backdrop-blur-[2px] pointer-events-none">
+          <div className="px-4 py-2 rounded-xl bg-[#F1F7F4] border border-[#D1E5DC] text-center shadow-sm">
             <span
               className="text-xs font-bold text-[#143B33]"
               style={{ fontFamily: lang === 'ur' ? URDU_FONT : 'inherit' }}
@@ -6857,7 +6864,7 @@ function ByProductNationalCard({
 }
 
 
-// ─── REVAMPED BY-PRODUCT COMBINED SCREEN (4-CARD GRID VIEWPORT) ─────────────
+// ─── REVAMPED BY-PRODUCT COMBINED SCREEN (SPACIOUS READABLE CARDS) ─────────────
 
 function ByProductCombinedScreen({
   products,
@@ -7087,9 +7094,9 @@ function ByProductCombinedScreen({
         )}
       </header>
 
-      {/* By-Product Cards — 4-card visible grid (2 columns x 2 rows fit on screen, scrollable) */}
+      {/* By-Product Cards — Spacious Stacked Layout for Maximum Readability */}
       <div
-        className="flex-1 overflow-y-auto px-2.5 sm:px-3 pt-2.5 pb-6"
+        className="flex-1 overflow-y-auto px-3.5 pt-3 pb-6 flex flex-col gap-3.5"
         style={{ scrollbarWidth: 'none' }}
       >
         {byproductCardsData.length === 0 ? (
@@ -7101,49 +7108,47 @@ function ByProductCombinedScreen({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-            {byproductCardsData.map(({ bp, stats }) => {
-              const navigateToDetail = () => {
-                const sa = stats.specialAttr;
-                let initMoisture: string | undefined;
-                let initColor: string | undefined;
-                let initVariety: string | undefined;
-                let initNewOld: string | undefined;
-                let initSpec: string | undefined;
+          byproductCardsData.map(({ bp, stats }) => {
+            const navigateToDetail = () => {
+              const sa = stats.specialAttr;
+              let initMoisture: string | undefined;
+              let initColor: string | undefined;
+              let initVariety: string | undefined;
+              let initNewOld: string | undefined;
+              let initSpec: string | undefined;
 
-                if (sa) {
-                  if (sa.type === 'moisture') initMoisture = sa.valueEn.replace('%', '').trim();
-                  else if (sa.type === 'color') initColor = sa.valueEn;
-                  else if (sa.type === 'variety') initVariety = sa.valueEn;
-                  else if (sa.type === 'newOld') initNewOld = sa.valueEn;
-                  else if (sa.type === 'spec') initSpec = sa.valueEn;
-                }
+              if (sa) {
+                if (sa.type === 'moisture') initMoisture = sa.valueEn.replace('%', '').trim();
+                else if (sa.type === 'color') initColor = sa.valueEn;
+                else if (sa.type === 'variety') initVariety = sa.valueEn;
+                else if (sa.type === 'newOld') initNewOld = sa.valueEn;
+                else if (sa.type === 'spec') initSpec = sa.valueEn;
+              }
 
-                push({
-                  id: 'product-rates',
-                  vertical: activeProduct?.vertical || 'Grains',
-                  product: activeProduct?.product || 'Wheat',
-                  byproduct: bp,
-                  initialRateType: stats.mostOccurringRateType,
-                  initialMoisture: initMoisture,
-                  initialColor: initColor,
-                  initialVariety: initVariety,
-                  initialNewOld: initNewOld,
-                  initialSpec: initSpec,
-                });
-              };
+              push({
+                id: 'product-rates',
+                vertical: activeProduct?.vertical || 'Grains',
+                product: activeProduct?.product || 'Wheat',
+                byproduct: bp,
+                initialRateType: stats.mostOccurringRateType,
+                initialMoisture: initMoisture,
+                initialColor: initColor,
+                initialVariety: initVariety,
+                initialNewOld: initNewOld,
+                initialSpec: initSpec,
+              });
+            };
 
-              return (
-                <ByProductNationalCard
-                  key={`${activeProduct?.product}-${bp}`}
-                  stats={stats}
-                  vertical={activeProduct?.vertical}
-                  onClick={navigateToDetail}
-                  onMorePriceTypesClick={navigateToDetail}
-                />
-              );
-            })}
-          </div>
+            return (
+              <ByProductNationalCard
+                key={`${activeProduct?.product}-${bp}`}
+                stats={stats}
+                vertical={activeProduct?.vertical}
+                onClick={navigateToDetail}
+                onMorePriceTypesClick={navigateToDetail}
+              />
+            );
+          })
         )}
       </div>
     </div>
